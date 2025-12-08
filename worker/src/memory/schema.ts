@@ -8,6 +8,7 @@ export interface UserProfile {
     date: string;
     summary: string;
   }[];
+  preferences?: string[];
 }
 
 export interface UserMemoryState {

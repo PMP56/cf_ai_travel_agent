@@ -52,14 +52,14 @@ export default {
         const userProfile = await getUserProfile(stub);
 
         // Run simplified travel planner workflow
-        const result = await executeWorkflow(env.AI, message);
+        const { plan, updatedProfile} = await executeWorkflow(env.AI, message, userProfile);
 
         // OPTIONAL: If you want to still update memory, uncomment:
-        // await updateUserProfile(stub, { ...userProfile });
+        await updateUserProfile(stub, updatedProfile);
 
         return jsonResponse(
           {
-            plan: result.plan,  // <-- new response shape
+            plan: plan,
             message: "Travel plan generated successfully!",
           },
           200,

@@ -17,7 +17,14 @@ export default function App() {
   ]);
 
   const [loading, setLoading] = useState<boolean>(false);
-  const [userId] = useState(() => `user_${crypto.randomUUID()}`);
+  const [userId] = useState(() => {
+    const saved = localStorage.getItem("userId");
+    if (saved) return saved;
+
+    const newId = `user_${crypto.randomUUID()}`;
+    localStorage.setItem("userId", newId);
+    return newId;
+  });
 
   const handleSendMessage = async (message: string) => {
     setMessages((prev) => [...prev, { role: "user", content: message }]);
