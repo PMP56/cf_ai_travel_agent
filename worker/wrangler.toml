@@ -1,0 +1,18 @@
+name = "ai-travel-concierge"
+main = "src/index.ts"
+compatibility_date = "2024-01-01"
+
+[ai]
+binding = "AI"
+
+[[durable_objects.bindings]]
+name = "USER_MEMORY"
+class_name = "UserMemory"
+script_name = "ai-travel-concierge"
+
+[[migrations]]
+tag = "v1"
+new_classes = ["UserMemory"]
+
+[vars]
+ENVIRONMENT = "production"
