@@ -1,4 +1,7 @@
-# AI Travel Guide
+# AI Travel Agent
+
+![AI Travel Agent](travel-agent.png)
+
 
 Serverless AI travel planner built with Cloudflare Workers, Durable Objects, and Llama 3.3 70B. Generate personalized itineraries with persistent user memory.
 
@@ -25,9 +28,6 @@ npx wrangler dev
 
 # Run locally
 npm run dev
-
-# Deploy
-npm run deploy
 ```
 
 ## API

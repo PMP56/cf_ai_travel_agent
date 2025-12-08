@@ -12,7 +12,7 @@ script_name = "ai-travel-concierge"
 
 [[migrations]]
 tag = "v1"
-new_classes = ["UserMemory"]
+new_sqlite_classes = ["UserMemory"]
 
 [vars]
 ENVIRONMENT = "production"
