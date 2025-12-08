@@ -62,7 +62,7 @@ export default function App() {
   return (
     <div className="min-h-screen w-full flex flex-col items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50 to-teal-50 px-2 sm:px-4 py-4 sm:py-8 gap-4 sm:gap-6">
       <div className="w-full max-w-4xl flex flex-col h-screen sm:h-auto">
-        <header className="text-center mb-4 sm:mb-8 flex-shrink-0">
+        <header className="text-center mb-4 sm:mb-8 flex-0">
           <div className="flex items-center justify-center gap-2 sm:gap-3 mb-2 sm:mb-3">
             <div className="relative">
               <Plane className="w-8 sm:w-12 text-blue-600 animate-pulse" />
@@ -73,14 +73,14 @@ export default function App() {
             </h1>
           </div>
           <p className="text-gray-600 text-sm sm:text-base lg:text-lg font-medium px-2">
-            Plan smarter, travel better — powered by AI
+            Plan smarter, travel better
           </p>
         </header>
 
         <div className="bg-white shadow-2xl rounded-2xl sm:rounded-3xl overflow-hidden border border-gray-200 flex flex-col flex-1 sm:flex-none sm:max-h-none">
           {isEmpty ? (
             <div className="flex-1 sm:h-[550px] flex flex-col items-center justify-center text-center px-4 sm:px-8 py-6 sm:py-8">
-              <div className="mb-4 sm:mb-6 relative flex-shrink-0">
+              <div className="mb-4 sm:mb-6 relative flex-0">
                 <Compass className="w-16 sm:w-20 text-blue-500 animate-spin-slow" />
               </div>
               <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2 sm:mb-3">
@@ -114,7 +114,7 @@ export default function App() {
           <InputBox onSend={handleSendMessage} disabled={loading} />
         </div>
 
-        <footer className="text-center text-xs sm:text-sm text-gray-500 mt-4 sm:mt-6 flex-shrink-0">
+        <footer className="text-center text-xs sm:text-sm text-gray-500 mt-4 sm:mt-6 flex-0">
           Built with Cloudflare Workers & Llama 3.3
         </footer>
       </div>
