@@ -5,6 +5,10 @@
 
 Serverless AI travel planner built with Cloudflare Workers, Durable Objects, and Llama 3.3 70B. Generate personalized itineraries with persistent user memory.
 
+### Running site is available at:
+> https://ai-travel-agent-2gy.pages.dev/
+
+
 ## Features
 
 - 🤖 AI-powered itineraries using Llama 3.3 70B
