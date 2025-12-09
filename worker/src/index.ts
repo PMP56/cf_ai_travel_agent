@@ -30,7 +30,7 @@ export default {
 
     // Health check
     if (url.pathname === "/" && request.method === "GET") {
-      return new Response("AI Travel Concierge Worker is running!", {
+      return new Response("AI Travel Agent Worker is running!", {
         status: 200,
         headers: corsHeaders(origin),
       });

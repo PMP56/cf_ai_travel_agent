@@ -76,7 +76,7 @@ export default function App() {
               <MapPin className="w-4 sm:w-5 text-teal-500 absolute -bottom-1 -right-1" />
             </div>
             <h1 className="text-3xl sm:text-5xl lg:text-6xl font-bold bg-gradient-to-r from-blue-700 to-teal-600 bg-clip-text text-transparent leading-tight">
-              AI Travel Concierge
+              AI Travel Agent
             </h1>
           </div>
           <p className="text-gray-600 text-sm sm:text-base lg:text-lg font-medium px-2">
