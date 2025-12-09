@@ -14,21 +14,27 @@ Serverless AI travel planner built with Cloudflare Workers, Durable Objects, and
 - 🤖 AI-powered itineraries using Llama 3.3 70B
 - 💾 User memory with Durable Objects
 - ⚡ Serverless on Cloudflare's edge network
-- 🔄 Structured JSON outputs
 
 ## Quick Start
 
+### For Backend
 ```bash
-# Install
-npm install
+cd worker
+npm run dev
 
-# Configure wrangler.toml with your settings
+# Configure wrangler.toml with your settings (optional)
 
 # Login
 npx wrangler login
 
 # Run server
 npx wrangler dev
+```
+
+### For Frontend
+```bash
+cd frontend
+npm install
 
 # Run locally
 npm run dev
@@ -51,7 +57,7 @@ Returns itinerary, daily schedule, and packing list.
 
 ### GET `/api/profile/:userId`
 
-Get user's saved profile and preferences.
+Get user's saved profile and preferences. (In progress)
 
 ## Configuration
 
@@ -118,22 +124,9 @@ curl -X POST http://localhost:8787/api/generate \
 
 ### Customization
 
-**Modify AI behavior**: Edit prompts in `src/utils/prompts.ts`
-
 **Add endpoints**: Add route handlers in `src/index.ts`
 
 **Change memory schema**: Update `src/memory/schema.ts`
-
-## Troubleshooting
-
-**Durable Object not found**: Run `wrangler migrations apply`
-
-**AI binding not available**: Enable Workers AI in your Cloudflare account
-
-**CORS errors**: Worker automatically handles preflight requests
-
-**Slow responses**: Adjust `max_tokens` in `ai.ts` or simplify prompts
-
 
 ## Tech Stack
 

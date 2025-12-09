@@ -1,5 +1,5 @@
 export interface TravelPlanResponse {
-  response: string; // markdown content returned from the model
+  response: string;
 }
 
 export interface TravelAPIResponse {
