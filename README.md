@@ -20,9 +20,9 @@ Serverless AI travel planner built with Cloudflare Workers, Durable Objects, and
 ### For Backend
 ```bash
 cd worker
-npm run dev
+npm install
 
-# Configure wrangler.toml with your settings (optional)
+# (Optional) Configure wrangler.toml with your settings
 
 # Login
 npx wrangler login
