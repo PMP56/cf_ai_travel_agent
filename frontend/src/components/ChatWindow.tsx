@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { Loader2, User, Sparkles } from "lucide-react";
 import type { ChatMessage } from "../types";
 import MessageContent from "./MessageContent";
+import PhotoStrip from "./PhotoStrip";  // add this
 
 interface ChatWindowProps {
   messages: ChatMessage[];
@@ -41,6 +42,9 @@ export default function ChatWindow({ messages, loading }: ChatWindowProps) {
             }`}
           >
             <MessageContent content={msg.content} isUser={msg.role === "user"} />
+            {msg.role === "assistant" && msg.photos && (  // add this
+              <PhotoStrip photos={msg.photos} />
+            )}
           </div>
 
           {msg.role === "user" && (

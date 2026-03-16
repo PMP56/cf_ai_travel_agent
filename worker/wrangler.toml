@@ -16,3 +16,4 @@ new_sqlite_classes = ["UserMemory"]
 
 [vars]
 ENVIRONMENT = "production"
+UNSPLASH_ACCESS_KEY = "swwZifV2anZemeFKDNWz1qdv_cvR3UuzZP1jLUGXKmA"

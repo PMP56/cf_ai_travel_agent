@@ -41,13 +41,12 @@ export default function App() {
 
       const data: TravelAPIResponse = await response.json();
 
-      const aiMarkdown = data.plan.response;
-
       setMessages((prev) => [
         ...prev,
         {
           role: "assistant",
-          content: aiMarkdown,
+          content: data.plan.response,
+          photos: data.photos ?? [],  // attach to the message
         },
       ]);
     } catch (err) {

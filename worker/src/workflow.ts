@@ -1,52 +1,43 @@
 import { UserProfile } from "./memory/schema";
+import { fetchDestinationPhotos, UnsplashPhoto } from "./utils/photos";
+import { buildPlanPrompt } from "./utils/prompts";
+import { extractDestination } from "./utils/exxtractDestination";
 
 export interface WorkflowResult {
-  itinerary: any;
-  schedule: any;
-  packing: any;
+  plan: any;
+  photos: UnsplashPhoto[];
   updatedProfile: UserProfile;
 }
 
-export async function executeWorkflow(ai: Ai, message: string, userProfile: UserProfile) {
-  const prompt = `
-    You are an AI travel planner.
+export async function executeWorkflow(
+  ai: Ai,
+  message: string,
+  userProfile: UserProfile,
+  unsplashKey: string
+): Promise<WorkflowResult> {
 
-    The user says:
-    "${message}"
+  const [planResponse, destinationInfo] = await Promise.all([
+    ai.run("@cf/meta/llama-3.3-70b-instruct-fp8-fast", {
+      messages: [
+        { role: "system", content: "You are a helpful travel planning assistant." },
+        { role: "user", content: buildPlanPrompt(message, userProfile) },
+      ],
+    }),
+    extractDestination(ai, message),
+  ]);
 
-    Respond with a concise and beautifully formatted travel plan in Markdown.
-    Include:
+  // Only fetch photos when it's an itinerary request with a real destination
+  const shouldFetchPhotos =
+    destinationInfo.destination !== null &&
+    !!unsplashKey;
 
-    # Destination
-    **Duration**
-    **Estimated Budget**
-    **Best Time to Visit**
+  const photos = shouldFetchPhotos
+    ? await fetchDestinationPhotos(destinationInfo.destination!, unsplashKey)
+    : [];
 
-    ## Overview
-    Short paragraph.
-
-    ## Highlights
-    - 5–7 highlights
-
-    ## Optional Add-ons
-    - Activities
-    - Tips
-
-    Keep it short but helpful.
-  `;
-
-  console.log("Generating travel plan...");
-  const response = await ai.run("@cf/meta/llama-3.3-70b-instruct-fp8-fast", {
-    messages: [
-      { role: "system", content: "You are a helpful travel planning assistant." },
-      { role: "user", content: prompt }
-    ]
-  });
-
-  console.log("Updating user profile with new preferences...");
+  // Extract and update user preferences
   const memoryPrompt = `
     Extract the user's travel preferences from this message:
-
     "${message}"
 
     Return a SINGLE short sentence summarizing stable preferences.
@@ -62,18 +53,22 @@ export async function executeWorkflow(ai: Ai, message: string, userProfile: User
   const memoryResponse = await ai.run("@cf/meta/llama-3.3-70b-instruct-fp8-fast", {
     messages: [
       { role: "system", content: "Extract concise travel preferences as plain text." },
-      { role: "user", content: memoryPrompt }
-    ]
+      { role: "user", content: memoryPrompt },
+    ],
   });
 
-  const extractedPrefs = (memoryResponse as any).response;
+  const extractedPrefs = (memoryResponse as any).response as string;
+
+  // Cap preferences at last 10 to prevent unbounded growth
+  const updatedPreferences = [
+    ...(userProfile.preferences ?? []),
+    extractedPrefs,
+  ].slice(-10);
+
   const updatedProfile: UserProfile = {
     ...userProfile,
-    preferences: [
-      ...(userProfile.preferences || []),
-      extractedPrefs,
-    ],
+    preferences: updatedPreferences,
   };
 
-  return { plan: response, updatedProfile };
+  return { plan: planResponse, photos, updatedProfile };
 }

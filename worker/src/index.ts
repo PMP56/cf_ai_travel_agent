@@ -11,6 +11,7 @@ export { UserMemory };
 interface Env {
   AI: Ai;
   USER_MEMORY: DurableObjectNamespace;
+  UNSPLASH_ACCESS_KEY: string;
 }
 
 interface GenerateRequestBody {
@@ -52,7 +53,14 @@ export default {
         const userProfile = await getUserProfile(stub);
 
         // Run simplified travel planner workflow
-        const { plan, updatedProfile} = await executeWorkflow(env.AI, message, userProfile);
+        const { plan, photos, updatedProfile } = await executeWorkflow(
+          env.AI,
+          message,
+          userProfile,
+          env.UNSPLASH_ACCESS_KEY // ← is this being passed?
+        );
+
+        console.log("Photos", photos)
 
         // OPTIONAL: If you want to still update memory, uncomment:
         await updateUserProfile(stub, updatedProfile);
@@ -60,6 +68,7 @@ export default {
         return jsonResponse(
           {
             plan: plan,
+            photos,
             message: "Travel plan generated successfully!",
           },
           200,
