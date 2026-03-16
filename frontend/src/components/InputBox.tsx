@@ -25,35 +25,40 @@ export default function InputBox({ onSend, disabled }: InputBoxProps) {
   };
 
   return (
-    <div className="border-t border-gray-200 bg-gray-50/50 px-3 sm:px-6 py-3 sm:py-4 flex-shrink-0">
-      <div className="flex gap-2 sm:gap-3 items-center">
-          <textarea
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Describe your dream trip..."
-            disabled={disabled}
-            rows={1}
-            className="w-full px-3 sm:px-4 py-2 sm:py-3 pr-10 sm:pr-12 border border-gray-300 rounded-lg sm:rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none disabled:bg-gray-100 disabled:cursor-not-allowed shadow-sm text-sm sm:text-base"
-            style={{ minHeight: '40px', maxHeight: '120px' }}
-            onInput={(e) => {
-              const target = e.target as HTMLTextAreaElement;
-              target.style.height = 'auto';
-              target.style.height = Math.min(target.scrollHeight, 120) + 'px';
-            }}
-          />
-        <button
-          onClick={handleSubmit}
-          disabled={disabled || !input.trim()}
-          className="px-3 sm:px-5 py-2 sm:py-3 bg-gradient-to-r from-blue-600 to-teal-600 text-white rounded-lg sm:rounded-xl hover:from-blue-700 hover:to-teal-700 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed transition-all shadow-md hover:shadow-lg flex items-center gap-1 sm:gap-2 font-medium flex-shrink-0 text-sm sm:text-base"
-        >
-          <Send className="w-4 h-4" />
-          <span className="hidden sm:inline">Send</span>
-        </button>
+    <div className="absolute bottom-6 left-0 right-0 flex justify-center px-4 pointer-events-none z-50">
+      <div className="w-full max-w-2xl pointer-events-auto">
+        <div className="bg-card border border-[rgba(0,0,0,0.08)] rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.12),0_2px_8px_rgba(0,0,0,0.06)] px-4 py-3">
+          <div className="flex gap-3 items-end">
+            <textarea
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Describe your dream trip…"
+              disabled={disabled}
+              rows={1}
+              className="flex-1 px-2 py-1.5 bg-transparent focus:outline-none resize-none disabled:opacity-50 disabled:cursor-not-allowed text-sm text-foreground placeholder:text-muted-foreground"
+              style={{ minHeight: "36px", maxHeight: "120px" }}
+              onInput={(e) => {
+                const target = e.target as HTMLTextAreaElement;
+                target.style.height = "auto";
+                target.style.height = Math.min(target.scrollHeight, 120) + "px";
+              }}
+            />
+            <button
+              onClick={handleSubmit}
+              disabled={disabled || !input.trim()}
+              className="px-3 py-2 bg-primary text-primary-foreground rounded-xl hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center gap-2 font-medium flex-shrink-0 shadow-sm"
+              style={{ minHeight: "36px" }}
+            >
+              <Send className="w-4 h-4" />
+              <span className="hidden sm:inline text-sm">Send</span>
+            </button>
+          </div>
+          <p className="text-xs text-muted-foreground mt-2 px-1 hidden sm:block">
+            Press Enter to send · Shift + Enter for new line
+          </p>
+        </div>
       </div>
-      <p className="text-xs text-gray-500 mt-4 px-1 hidden sm:block">
-        Press Enter to send, Shift + Enter for new line
-      </p>
     </div>
   );
 }

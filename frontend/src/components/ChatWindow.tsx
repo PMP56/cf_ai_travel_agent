@@ -1,73 +1,121 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useMemo } from "react";
 import { Loader2, User, Sparkles } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import type { ChatMessage } from "../types";
 import MessageContent from "./MessageContent";
-import PhotoStrip from "./PhotoStrip";  // add this
+import PhotoGallery from "./PhotoGallery";
 
 interface ChatWindowProps {
   messages: ChatMessage[];
   loading: boolean;
+  isGalleryVisible: boolean;
 }
 
-export default function ChatWindow({ messages, loading }: ChatWindowProps) {
+export default function ChatWindow({
+  messages,
+  loading,
+  isGalleryVisible,
+}: ChatWindowProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, loading]);
 
+  const allPhotos = useMemo(
+    () => messages.flatMap((msg) => msg.photos || []),
+    [messages]
+  );
+
+  const hasPhotos = allPhotos.length > 0;
+  const showGallery = hasPhotos && isGalleryVisible;
+
   return (
-   <div
-      className="overflow-y-auto px-3 sm:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6 scroll-smooth"
-      style={{ height: "60vh", maxHeight: "550px", minHeight: "400px" }}
-    >
-      {messages.map((msg, idx) => (
-        <div
-          key={idx}
-          className={`flex gap-2 sm:gap-4 animate-fade-in ${
-            msg.role === "user" ? "justify-end" : "justify-start"
-          }`}
-        >
-          {msg.role === "assistant" && (
-            <div className="flex-shrink-0 w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-blue-500 to-teal-500 flex items-center justify-center shadow-lg">
-              <Sparkles className="w-4 sm:w-5 h-4 sm:h-5 text-white" />
-            </div>
+    <div className="flex w-full h-full overflow-hidden">
+      {/* Chat Pane — flex-1 so it fills remaining space after the sidebar */}
+      <motion.div
+        layout
+        transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
+        className="flex-1 overflow-y-auto bg-card"
+        style={{ minWidth: 0 }}
+      >
+        <div className="max-w-3xl mx-auto px-6 pt-10 pb-28 space-y-6">
+          {messages.map((msg, idx) => (
+            <motion.div
+              key={idx}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, ease: "easeOut" }}
+              className={`flex gap-3 ${
+                msg.role === "user" ? "justify-end" : "justify-start"
+              }`}
+            >
+              {msg.role === "assistant" && (
+                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary flex items-center justify-center shadow-sm">
+                  <Sparkles className="w-4 h-4 text-primary-foreground" />
+                </div>
+              )}
+
+              <div
+                className={`max-w-[85%] rounded-2xl px-4 py-3 ${
+                  msg.role === "user"
+                    ? "bg-primary text-primary-foreground shadow-sm"
+                    : "bg-muted border border-[rgba(0,0,0,0.06)]"
+                }`}
+              >
+                <MessageContent
+                  content={msg.content}
+                  isUser={msg.role === "user"}
+                />
+              </div>
+
+              {msg.role === "user" && (
+                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-secondary flex items-center justify-center shadow-sm">
+                  <User className="w-4 h-4 text-secondary-foreground" />
+                </div>
+              )}
+            </motion.div>
+          ))}
+
+          {loading && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex gap-3"
+            >
+              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary flex items-center justify-center shadow-sm">
+                <Sparkles className="w-4 h-4 text-primary-foreground" />
+              </div>
+              <div className="bg-muted border border-[rgba(0,0,0,0.06)] rounded-2xl px-4 py-3 flex items-center gap-2">
+                <Loader2 className="w-4 h-4 animate-spin text-primary flex-shrink-0" />
+                <span className="text-muted-foreground text-sm">
+                  Crafting your travel plan…
+                </span>
+              </div>
+            </motion.div>
           )}
 
-          <div
-            className={`max-w-[80%] sm:max-w-[75%] rounded-xl sm:rounded-2xl px-3 sm:px-5 py-2 sm:py-3 shadow-md text-sm sm:text-base ${
-              msg.role === "user"
-                ? "bg-gradient-to-br from-blue-600 to-blue-700 text-white"
-                : "bg-white border border-gray-200"
-            }`}
+          <div ref={bottomRef} className="h-4" />
+        </div>
+      </motion.div>
+
+      {/* Gallery Sidebar — fixed width, animated in/out */}
+      <AnimatePresence mode="popLayout">
+        {showGallery && (
+          <motion.aside
+            key="gallery"
+            initial={{ width: 0, opacity: 0 }}
+            animate={{ width: "25%", opacity: 1 }}
+            exit={{ width: 0, opacity: 0 }}
+            transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
+            className="hidden lg:block border-l border-[rgba(0,0,0,0.06)] bg-background overflow-hidden flex-shrink-0"
           >
-            <MessageContent content={msg.content} isUser={msg.role === "user"} />
-            {msg.role === "assistant" && msg.photos && (  // add this
-              <PhotoStrip photos={msg.photos} />
-            )}
-          </div>
-
-          {msg.role === "user" && (
-            <div className="flex-shrink-0 w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-gray-600 to-gray-700 flex items-center justify-center shadow-lg">
-              <User className="w-4 sm:w-5 h-4 sm:h-5 text-white" />
+            <div className="w-full h-full overflow-y-auto">
+              <PhotoGallery photos={allPhotos} />
             </div>
-          )}
-        </div>
-      ))}
-
-      {loading && (
-        <div className="flex gap-2 sm:gap-4 animate-fade-in">
-          <div className="flex-shrink-0 w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-blue-500 to-teal-500 flex items-center justify-center shadow-lg">
-            <Sparkles className="w-4 sm:w-5 h-4 sm:h-5 text-white" />
-          </div>
-          <div className="bg-white border border-gray-200 rounded-xl sm:rounded-2xl px-3 sm:px-5 py-2 sm:py-3 shadow-md flex items-center gap-2">
-            <Loader2 className="w-4 h-4 animate-spin text-blue-600 flex-shrink-0" />
-            <span className="text-gray-600 text-sm sm:text-base">Crafting your travel plan...</span>
-          </div>
-        </div>
-      )}
-
-      <div ref={bottomRef} />
+          </motion.aside>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
