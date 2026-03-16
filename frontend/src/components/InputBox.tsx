@@ -27,7 +27,7 @@ export default function InputBox({ onSend, disabled }: InputBoxProps) {
   return (
     <div className="absolute bottom-6 left-0 right-0 flex justify-center px-4 pointer-events-none z-50">
       <div className="w-full max-w-2xl pointer-events-auto">
-        <div className="bg-card border border-[rgba(0,0,0,0.08)] rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.12),0_2px_8px_rgba(0,0,0,0.06)] px-4 py-3">
+        <div className="bg-background/70 backdrop-blur-xl border border-border rounded-2xl shadow-[0_8px_40px_-12px_hsl(var(--primary)/0.15),0_0_0_1px_hsl(var(--border))] px-4 py-3">
           <div className="flex gap-3 items-end">
             <textarea
               value={input}
@@ -47,11 +47,10 @@ export default function InputBox({ onSend, disabled }: InputBoxProps) {
             <button
               onClick={handleSubmit}
               disabled={disabled || !input.trim()}
-              className="px-3 py-2 bg-primary text-primary-foreground rounded-xl hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center gap-2 font-medium flex-shrink-0 shadow-sm"
+              className="px-3 py-2 bg-accent text-accent-foreground rounded-xl hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center font-medium flex-shrink-0 shadow-sm"
               style={{ minHeight: "36px" }}
             >
               <Send className="w-4 h-4" />
-              <span className="hidden sm:inline text-sm">Send</span>
             </button>
           </div>
           <p className="text-xs text-muted-foreground mt-2 px-1 hidden sm:block">

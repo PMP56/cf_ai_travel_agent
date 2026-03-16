@@ -10,7 +10,7 @@ export interface UnsplashPhoto {
 export async function fetchDestinationPhotos(
   destination: string,
   accessKey: string,
-  count = 4
+  count = 6
 ): Promise<UnsplashPhoto[]> {
   const query = encodeURIComponent(`${destination} travel`);
   const res = await fetch(

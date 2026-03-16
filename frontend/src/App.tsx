@@ -1,14 +1,13 @@
-import { useState } from "react";
-import { Plane, PanelRight } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Plane, PanelRight, Sun, Moon } from "lucide-react";
 import ChatWindow from "./components/ChatWindow";
 import InputBox from "./components/InputBox";
 import WelcomeScreen from "./components/WelcomeScreen";
 import type { ChatMessage, TravelAPIResponse } from "./types";
 
-const API_ENDPOINT =
-  import.meta.env.VITE_API_ENDPOINT || "http://localhost:8787";
+const API_ENDPOINT = import.meta.env.VITE_API_ENDPOINT || "http://localhost:8787";
 
-export default function App() {
+export default function Index() {
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       role: "assistant",
@@ -16,8 +15,15 @@ export default function App() {
         "Hello! I'm your AI Travel Guide. Tell me about your dream trip and I'll help you plan it!",
     },
   ]);
-  const [loading, setLoading] = useState<boolean>(false);
+  const [loading, setLoading] = useState(false);
   const [isGalleryVisible, setIsGalleryVisible] = useState(true);
+  
+  const [isDark, setIsDark] = useState(() => {
+    const saved = localStorage.getItem("theme");
+    if (saved) return saved === "dark";
+    return window.matchMedia("(prefers-color-scheme: dark)").matches;
+  });
+  
   const [userId] = useState(() => {
     const saved = localStorage.getItem("userId");
     if (saved) return saved;
@@ -26,10 +32,14 @@ export default function App() {
     return newId;
   });
 
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", isDark);
+    localStorage.setItem("theme", isDark ? "dark" : "light");
+  }, [isDark]);
+
   const handleSendMessage = async (message: string) => {
     setMessages((prev) => [...prev, { role: "user", content: message }]);
     setLoading(true);
-
     try {
       const response = await fetch(`${API_ENDPOINT}/api/generate`, {
         method: "POST",
@@ -64,47 +74,49 @@ export default function App() {
   const hasPhotos = messages.some((m) => m.photos && m.photos.length > 0);
 
   return (
-    <div className="h-screen w-full flex flex-col bg-background overflow-hidden">
+    <div className="h-screen w-full flex flex-col bg-background overflow-hidden font-body">
       {/* Header */}
-      <header className="h-14 px-6 flex items-center justify-between bg-card shadow-[0_1px_0_0_rgba(0,0,0,0.06)] z-50 flex-shrink-0">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center shadow-sm">
-            <Plane className="w-4 h-4 text-primary-foreground" />
+      <header className="h-16 px-6 flex items-center justify-between border-b border-border bg-background/80 backdrop-blur-md z-50 flex-shrink-0">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 bg-primary rounded-xl flex items-center justify-center shadow-sm">
+            <Plane className="w-4.5 h-4.5 text-primary-foreground" />
           </div>
-          <span className="font-semibold tracking-tight text-foreground">
+          <span className="font-display text-xl font-semibold tracking-tight text-foreground">
             Travel Agent
           </span>
         </div>
 
-        {!isEmpty && hasPhotos && (
+        <div className="flex items-center gap-2">
           <button
-            onClick={() => setIsGalleryVisible(!isGalleryVisible)}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-md hover:bg-muted transition-colors text-sm font-medium text-muted-foreground hover:text-foreground"
-          >
-            <PanelRight
-              className={`w-4 h-4 transition-colors ${
-                isGalleryVisible ? "text-primary" : ""
-              }`}
-            />
-            {isGalleryVisible ? "Hide Gallery" : "Show Gallery"}
+              onClick={() => setIsDark(!isDark)}
+              className="w-9 h-9 rounded-lg flex items-center justify-center hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+              aria-label="Toggle theme"
+            >
+              {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
           </button>
-        )}
+          {!isEmpty && hasPhotos && (
+            <button
+              onClick={() => setIsGalleryVisible(!isGalleryVisible)}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-muted transition-colors text-sm font-medium text-muted-foreground hover:text-foreground"
+            >
+              <PanelRight
+                className={`w-4 h-4 transition-colors ${isGalleryVisible ? "text-primary" : ""}`}
+              />
+              {isGalleryVisible ? "Hide Gallery" : "Show Gallery"}
+            </button>
+          )}
+        </div>
       </header>
 
       {/* Main area */}
       <main className="flex-1 flex overflow-hidden relative">
         {isEmpty ? (
-          <WelcomeScreen />
+          <WelcomeScreen onSend={handleSendMessage} />
         ) : (
-          <ChatWindow
-            messages={messages}
-            loading={loading}
-            isGalleryVisible={isGalleryVisible}
-          />
+          <ChatWindow messages={messages} loading={loading} isGalleryVisible={isGalleryVisible} />
         )}
+        <InputBox onSend={handleSendMessage} disabled={loading} />
       </main>
-
-      <InputBox onSend={handleSendMessage} disabled={loading} />
     </div>
   );
 }
