@@ -7,18 +7,28 @@ export interface UnsplashPhoto {
   photographerUrl: string;
 }
 
-export interface TravelPlanResponse {
-  response: string;
+export interface Highlight {
+  title: string;
+  date: string;
+  description: string;
 }
 
+export interface TravelPlan {
+  destinationOverview: string;
+  highlights: Highlight[];
+  optionalAddOns: string;
+}
+
+
 export interface TravelAPIResponse {
-  plan: TravelPlanResponse;
-  photos: UnsplashPhoto[];  // add this
+  plan: TravelPlan;
+  photos: UnsplashPhoto[];
   message: string;
 }
 
 export interface ChatMessage {
   role: "user" | "assistant";
   content: string;
-  photos?: UnsplashPhoto[];  // attach photos to the message they belong to
+  plan?: TravelPlan;        // structured plan, only on assistant messages
+  photos?: UnsplashPhoto[];
 }

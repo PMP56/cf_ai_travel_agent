@@ -11,19 +11,18 @@ export default function Index() {
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       role: "assistant",
-      content:
-        "Hello! I'm your AI Travel Guide. Tell me about your dream trip and I'll help you plan it!",
+      content: "Hello! I'm your AI Travel Guide. Tell me about your dream trip and I'll help you plan it!",
     },
   ]);
   const [loading, setLoading] = useState(false);
   const [isGalleryVisible, setIsGalleryVisible] = useState(true);
-  
+
   const [isDark, setIsDark] = useState(() => {
     const saved = localStorage.getItem("theme");
     if (saved) return saved === "dark";
     return window.matchMedia("(prefers-color-scheme: dark)").matches;
   });
-  
+
   const [userId] = useState(() => {
     const saved = localStorage.getItem("userId");
     if (saved) return saved;
@@ -48,11 +47,13 @@ export default function Index() {
       });
       if (!response.ok) throw new Error("Failed to generate travel plan");
       const data: TravelAPIResponse = await response.json();
+
       setMessages((prev) => [
         ...prev,
         {
           role: "assistant",
-          content: data.plan.response,
+          content: data.plan.destinationOverview, // plain string fallback for simple renderers
+          plan: data.plan,                        // full structured plan for rich UI
           photos: data.photos ?? [],
         },
       ]);
@@ -88,11 +89,11 @@ export default function Index() {
 
         <div className="flex items-center gap-2">
           <button
-              onClick={() => setIsDark(!isDark)}
-              className="w-9 h-9 rounded-lg flex items-center justify-center hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
-              aria-label="Toggle theme"
-            >
-              {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            onClick={() => setIsDark(!isDark)}
+            className="w-9 h-9 rounded-lg flex items-center justify-center hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+            aria-label="Toggle theme"
+          >
+            {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
           </button>
           {!isEmpty && hasPhotos && (
             <button

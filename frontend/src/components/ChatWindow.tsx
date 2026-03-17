@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import type { ChatMessage } from "../types";
 import MessageContent from "./MessageContent";
 import PhotoGallery from "./PhotoGallery";
+import LoadingSkeleton from "./LoadingSkeleton";
 
 interface ChatWindowProps {
   messages: ChatMessage[];
@@ -12,10 +13,17 @@ interface ChatWindowProps {
 }
 
 export default function ChatWindow({ messages, loading, isGalleryVisible }: ChatWindowProps) {
-  const bottomRef = useRef<HTMLDivElement>(null);
+  const lastMessageRef = useRef<HTMLDivElement>(null);
+  const loadingRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (loading) {
+      // While waiting, keep the loading bubble visible
+      loadingRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+    } else {
+      // Once response arrives, snap to the TOP of the new message
+      lastMessageRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
   }, [messages, loading]);
 
   const allPhotos = useMemo(
@@ -36,35 +44,43 @@ export default function ChatWindow({ messages, loading, isGalleryVisible }: Chat
         style={{ minWidth: 0 }}
       >
         <div className="max-w-[700px] mx-auto px-6 pt-10 pb-32 space-y-5">
-          {messages.map((msg, idx) => (
-            <motion.div
-              key={idx}
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{
-                duration: 0.5,
-                ease: [0.25, 0.46, 0.45, 0.94],
-                delay: idx === messages.length - 1 ? 0.1 : 0,
-              }}
-              className={`flex gap-3 ${msg.role === "user" ? "justify-end" : "justify-start"}`}
-            >
-              {msg.role === "assistant" && (
-                <div className="flex-shrink-0 w-9 h-9 rounded-xl bg-primary flex items-center justify-center shadow-sm mt-1">
-                  <Sparkles className="w-4 h-4 text-primary-foreground" />
-                </div>
-              )}
+          {messages.map((msg, idx) => {
+            const isLast = idx === messages.length - 1;
+            return (
+              <motion.div
+                key={idx}
+                ref={isLast ? lastMessageRef : undefined}
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{
+                  duration: 0.5,
+                  ease: [0.25, 0.46, 0.45, 0.94],
+                  delay: isLast ? 0.1 : 0,
+                }}
+                className={`flex gap-3 scroll-mt-24 ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+              >
+                {msg.role === "assistant" && (
+                  <div className="flex-shrink-0 w-9 h-9 rounded-xl bg-primary flex items-center justify-center shadow-sm mt-1">
+                    <Sparkles className="w-4 h-4 text-primary-foreground" />
+                  </div>
+                )}
 
-              {msg.role === "user" ? (
-                <div className="max-w-[75%] px-5 py-3 rounded-2xl rounded-br-md bg-accent text-accent-foreground shadow-sm">
-                  <p className="leading-relaxed text-sm font-medium">{msg.content}</p>
-                </div>
-              ) : (
-                <div className="flex-1 max-w-[90%] bg-background border border-border rounded-xl px-6 py-5 shadow-[0_1px_3px_0_hsl(var(--primary)/0.04),0_0_0_1px_hsl(var(--border))]">
-                  <MessageContent content={msg.content} isUser={false} />
-                </div>
-              )}
-            </motion.div>
-          ))}
+                {msg.role === "user" ? (
+                  <div className="max-w-[75%] px-5 py-3 rounded-2xl rounded-br-md bg-accent text-accent-foreground shadow-sm">
+                    <p className="leading-relaxed text-sm font-medium">{msg.content}</p>
+                  </div>
+                ) : (
+                  <div className="flex-1 max-w-[90%] bg-background border border-border rounded-xl px-6 py-5 shadow-[0_1px_3px_0_hsl(var(--primary)/0.04),0_0_0_1px_hsl(var(--border))]">
+                    <MessageContent
+                      content={msg.content}
+                      plan={msg.plan}
+                      isUser={false}
+                    />
+                  </div>
+                )}
+              </motion.div>
+            );
+          })}
 
           {loading && (
             <motion.div
@@ -76,18 +92,11 @@ export default function ChatWindow({ messages, loading, isGalleryVisible }: Chat
               <div className="flex-shrink-0 w-9 h-9 rounded-xl bg-primary flex items-center justify-center shadow-sm">
                 <Sparkles className="w-4 h-4 text-primary-foreground" />
               </div>
-              <div className="bg-background border border-border rounded-xl px-6 py-5 shadow-sm">
-                <div className="flex items-center gap-3">
-                  <Loader2 className="w-4 h-4 animate-spin text-primary flex-shrink-0" />
-                  <span className="text-muted-foreground text-sm italic">
-                    Crafting your travel plan…
-                  </span>
-                </div>
+              <div className="flex-1 max-w-[90%] bg-background border border-border rounded-xl px-6 py-5 shadow-sm">
+                <LoadingSkeleton />
               </div>
             </motion.div>
           )}
-
-          <div ref={bottomRef} className="h-4" />
         </div>
       </motion.div>
 

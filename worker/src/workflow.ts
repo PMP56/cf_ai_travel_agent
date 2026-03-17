@@ -2,11 +2,54 @@ import { UserProfile } from "./memory/schema";
 import { fetchDestinationPhotos, UnsplashPhoto } from "./utils/photos";
 import { buildPlanPrompt } from "./utils/prompts";
 import { extractDestination } from "./utils/exxtractDestination";
+import { TravelPlan } from "./utils/plan";
 
 export interface WorkflowResult {
   plan: any;
   photos: UnsplashPhoto[];
   updatedProfile: UserProfile;
+}
+
+function parsePlanResponse(raw: unknown): TravelPlan {
+  let parsed: any;
+
+  if (typeof raw === "object" && raw !== null) {
+    parsed = raw;
+  } else if (typeof raw === "string") {
+    const cleaned = raw
+      .replace(/```json\s*/gi, "")
+      .replace(/```\s*/g, "")
+      .trim();
+    parsed = JSON.parse(cleaned);
+  } else {
+    throw new Error("Unexpected plan response format");
+  }
+
+  // Validate shape before trusting it
+  if (
+    typeof parsed.destinationOverview !== "string" ||
+    !Array.isArray(parsed.highlights) ||
+    typeof parsed.optionalAddOns !== "string"
+  ) {
+    throw new Error("Plan response is missing required fields");
+  }
+
+  const highlights = parsed.highlights.map((h: any, i: number) => {
+    if (
+      typeof h.title !== "string" ||
+      typeof h.date !== "string" ||
+      typeof h.description !== "string"
+    ) {
+      throw new Error(`Highlight at index ${i} is malformed`);
+    }
+    return { title: h.title, date: h.date, description: h.description };
+  });
+
+  return {
+    destinationOverview: parsed.destinationOverview,
+    highlights,
+    optionalAddOns: parsed.optionalAddOns,
+  };
 }
 
 export async function executeWorkflow(
@@ -18,6 +61,7 @@ export async function executeWorkflow(
 
   const [planResponse, destinationInfo] = await Promise.all([
     ai.run("@cf/meta/llama-3.3-70b-instruct-fp8-fast", {
+      max_tokens: 2048,
       messages: [
         { role: "system", content: "You are a helpful travel planning assistant." },
         { role: "user", content: buildPlanPrompt(message, userProfile) },
@@ -26,16 +70,13 @@ export async function executeWorkflow(
     extractDestination(ai, message),
   ]);
 
-  // Only fetch photos when it's an itinerary request with a real destination
-  const shouldFetchPhotos =
-    destinationInfo.destination !== null &&
-    !!unsplashKey;
+  const plan = parsePlanResponse((planResponse as any).response);
 
-  const photos = shouldFetchPhotos
-    ? await fetchDestinationPhotos(destinationInfo.destination!, unsplashKey)
-    : [];
+  const photos =
+    destinationInfo.destination && unsplashKey
+      ? await fetchDestinationPhotos(destinationInfo.destination, unsplashKey)
+      : [];
 
-  // Extract and update user preferences
   const memoryPrompt = `
     Extract the user's travel preferences from this message:
     "${message}"
@@ -58,17 +99,14 @@ export async function executeWorkflow(
   });
 
   const extractedPrefs = (memoryResponse as any).response as string;
-
-  // Cap preferences at last 10 to prevent unbounded growth
   const updatedPreferences = [
     ...(userProfile.preferences ?? []),
     extractedPrefs,
   ].slice(-10);
 
-  const updatedProfile: UserProfile = {
-    ...userProfile,
-    preferences: updatedPreferences,
+  return {
+    plan,
+    photos,
+    updatedProfile: { ...userProfile, preferences: updatedPreferences },
   };
-
-  return { plan: planResponse, photos, updatedProfile };
 }

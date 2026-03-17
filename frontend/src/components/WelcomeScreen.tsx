@@ -84,7 +84,7 @@ export default function WelcomeScreen({ onSend }: WelcomeScreenProps) {
             key={s.label}
             initial={{ opacity: 0, scale: 0.85 }}
             animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.4 + i * 0.06, duration: 0.3, ease: "easeOut" }}
+            transition={{ delay: i * 0.06, duration: 0.1, ease: "easeOut" }}
             whileHover={{ scale: 1.05, y: -2 }}
             whileTap={{ scale: 0.97 }}
             onClick={() => onSend(s.prompt)}

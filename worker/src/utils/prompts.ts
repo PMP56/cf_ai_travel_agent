@@ -1,5 +1,3 @@
-// worker/src/utils/prompts.ts  (replace the entire dead file with just this)
-
 import { UserProfile } from "../memory/schema";
 
 export function buildPlanPrompt(message: string, userProfile: UserProfile): string {
@@ -9,25 +7,25 @@ export function buildPlanPrompt(message: string, userProfile: UserProfile): stri
 
   return `You are an AI travel planner.${preferencesContext}
 
-    The user says: "${message}"
+The user says: "${message}"
 
-    Respond with a concise and beautifully formatted travel plan in Markdown.
-    Include:
+Return ONLY a raw JSON object — no markdown, no backticks, no explanation.
 
-    # Destination
-    **Duration**
-    **Estimated Budget**
-    **Best Time to Visit**
+The JSON must follow this exact shape:
+{
+  "destinationOverview": "<2–3 sentence overview including destination name, duration, budget range, and best time to visit>",
+  "highlights": [
+    {
+      "title": "<short activity title>",
+      "date": "<suggested day, e.g. Day 1, Day 3–4>",
+      "description": "<1–2 sentence description of the activity>"
+    }
+  ],
+  "optionalAddOns": "<paragraph of optional activities, tips, and recommendations>"
+}
 
-    ## Overview
-    Short paragraph.
-
-    ## Highlights
-    - 5–7 highlights
-
-    ## Optional Add-ons
-    - Activities
-    - Tips
-
-    Keep it short but helpful.`;
+Rules:
+- highlights must be an array of 5–7 items
+- Every field must be a non-empty string
+- Do not include any text outside the JSON object`;
 }
