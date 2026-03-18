@@ -39,8 +39,8 @@ export default function WelcomeScreen({ onSend }: WelcomeScreenProps) {
       >
         <div className="relative w-20 h-20 mx-auto">
           <div className="absolute inset-0 rounded-2xl bg-primary/20 blur-xl scale-150" />
-          <div className="relative w-20 h-20 bg-primary rounded-2xl flex items-center justify-center shadow-xl">
-            <Compass className="w-10 h-10 text-primary-foreground" />
+          <div className="relative w-16 h-16 md:w-20 md:h-20 bg-primary rounded-2xl flex items-center justify-center shadow-xl">
+            <Compass className="w-8 h-8 md:w-10 md:h-10 text-primary-foreground" />
           </div>
           <motion.div
             animate={{ rotate: 360 }}
@@ -58,7 +58,7 @@ export default function WelcomeScreen({ onSend }: WelcomeScreenProps) {
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.15, duration: 0.5, ease: "easeOut" }}
-        className="font-display text-4xl font-bold tracking-tight text-foreground mb-3 relative z-10"
+        className="font-display text-3xl md:text-4xl font-bold tracking-tight text-foreground mb-3 relative z-10"
       >
         Where shall we go?
       </motion.h2>
@@ -67,7 +67,7 @@ export default function WelcomeScreen({ onSend }: WelcomeScreenProps) {
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.25, duration: 0.5, ease: "easeOut" }}
-        className="text-muted-foreground max-w-sm text-base mb-8 leading-relaxed relative z-10"
+        className="text-muted-foreground max-w-sm text-sm md:text-base mb-8 leading-relaxed relative z-10"
       >
         Tell me your dream destination and I'll craft a personalized travel plan with visual inspiration.
       </motion.p>
@@ -90,7 +90,7 @@ export default function WelcomeScreen({ onSend }: WelcomeScreenProps) {
             onClick={() => onSend(s.prompt)}
             className="flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-background border border-border text-sm font-medium text-foreground shadow-sm hover:shadow-md hover:border-primary/40 hover:bg-primary/5 transition-colors cursor-pointer"
           >
-            <Sparkles className="w-3.5 h-3.5 text-primary/70 flex-shrink-0" />
+            {/* <Sparkles className="w-3.5 h-3.5 text-primary/70 flex-shrink-0" /> */}
             {s.label}
           </motion.button>
         ))}
@@ -101,7 +101,7 @@ export default function WelcomeScreen({ onSend }: WelcomeScreenProps) {
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.55, duration: 0.45, ease: "easeOut" }}
-        className="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full max-w-xl relative z-10"
+        className="hidden md:grid grid-cols-1 sm:grid-cols-3 gap-3 w-full max-w-xl relative z-10 "
       >
         {features.map(({ icon: Icon, title, desc }, i) => (
           <motion.div

@@ -14,6 +14,7 @@ export interface Highlight {
 }
 
 export interface TravelPlan {
+  destination: string;
   destinationOverview: string;
   highlights: Highlight[];
   optionalAddOns: string;

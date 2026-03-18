@@ -3,7 +3,7 @@ import {
   getUserProfile,
   updateUserProfile,
 } from "./memory/UserMemory";
-import { executeWorkflow } from "./workflow";
+import { executeWorkflow, replaceHighlight } from "./workflow";
 import { corsHeaders, jsonResponse, errorResponse } from "./utils/helpers";
 
 export { UserMemory };
@@ -17,6 +17,14 @@ interface Env {
 interface GenerateRequestBody {
   userId: string;
   message: string;
+}
+
+interface ReplaceHighlightRequestBody {
+  userId: string;
+  destination: string;
+  day: string;
+  currentTitle: string;
+  allHighlights: { title: string; date: string }[];
 }
 
 export default {
@@ -78,6 +86,34 @@ export default {
         console.error("Error:", err);
         const message =
           err instanceof Error ? err.message : "Internal server error";
+        return errorResponse(message, 500, origin);
+      }
+    }
+
+    // POST /api/replace-highlight
+    if (url.pathname === "/api/replace-highlight" && request.method === "POST") {
+      try {
+        const body = (await request.json()) as Partial<ReplaceHighlightRequestBody>;
+        const { destination, day, currentTitle, allHighlights } = body;
+
+        console.log("===============================")
+        console.log(body)
+
+        if (!destination || !day || !currentTitle || !allHighlights) {
+          return errorResponse("destination, day, currentTitle and allHighlights are required", 400, origin);
+        }
+
+        const highlight = await replaceHighlight(env.AI, {
+          destination,
+          day,
+          currentTitle,
+          allHighlights,
+        });
+
+        return jsonResponse({ highlight }, 200, origin);
+      } catch (err) {
+        console.error("Error:", err);
+        const message = err instanceof Error ? err.message : "Internal server error";
         return errorResponse(message, 500, origin);
       }
     }

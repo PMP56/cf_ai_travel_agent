@@ -1,7 +1,7 @@
 import { useEffect, useRef, useMemo } from "react";
 import { Sparkles } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import type { ChatMessage } from "../types";
+import type { ChatMessage, Highlight} from "../types";
 import MessageContent from "./MessageContent";
 import PhotoGallery from "./PhotoGallery";
 import LoadingSkeleton from "./LoadingSkeleton";
@@ -10,9 +10,10 @@ interface ChatWindowProps {
   messages: ChatMessage[];
   loading: boolean;
   isGalleryVisible: boolean;
+  onReplaceHighlight: (messageIdx: number, day: string, currentTitle: string, replacement: Highlight) => void;
 }
 
-export default function ChatWindow({ messages, loading, isGalleryVisible }: ChatWindowProps) {
+export default function ChatWindow({ messages, loading, isGalleryVisible, onReplaceHighlight }: ChatWindowProps) {
   const lastMessageRef = useRef<HTMLDivElement>(null);
   const loadingRef = useRef<HTMLDivElement>(null);
 
@@ -75,6 +76,9 @@ export default function ChatWindow({ messages, loading, isGalleryVisible }: Chat
                       content={msg.content}
                       plan={msg.plan}
                       isUser={false}
+                      onReplaceHighlight={(day, currentTitle, replacement) =>
+                        onReplaceHighlight(idx, day, currentTitle, replacement)
+                      }
                     />
                   </div>
                 )}

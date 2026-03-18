@@ -53,8 +53,8 @@ export default function InputBox({ onSend, disabled }: InputBoxProps) {
               <Send className="w-4 h-4" />
             </button>
           </div>
-          <p className="text-xs text-muted-foreground mt-2 px-1 hidden sm:block">
-            Press Enter to send · Shift + Enter for new line
+          <p className="text-[10px] text-muted-foreground mt-2 px-1 hidden sm:block">
+            Press Enter to send | Shift + Enter for new line
           </p>
         </div>
       </div>

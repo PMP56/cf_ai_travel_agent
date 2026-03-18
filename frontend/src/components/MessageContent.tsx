@@ -1,12 +1,13 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { RefreshCw, ChevronDown, MapPin, Clock } from "lucide-react";
+import { RefreshCw, ChevronDown, MapPin, Clock, Loader2 } from "lucide-react";
 import type { TravelPlan, Highlight } from "../types";
 
 interface MessageContentProps {
   content: string;
   plan?: TravelPlan;
   isUser: boolean;
+  onReplaceHighlight?: (day: string, currentTitle: string, replaceWith: Highlight) => void;
 }
 
 const containerVariants = {
@@ -61,8 +62,39 @@ const dayPalettes = [
   },
 ];
 
-export default function MessageContent({ content, plan, isUser }: MessageContentProps) {
+export default function MessageContent({ content, plan, isUser, onReplaceHighlight }: MessageContentProps) {
   const [openKey, setOpenKey] = useState<string | null>(null);
+  const [replacingKey, setReplacingKey] = useState<string | null>(null);
+
+  async function handleReplace(day: string, currentTitle: string, cardKey: string) {
+    if (!onReplaceHighlight || !plan) return;
+
+    console.log("plan.destination:", plan.destination); // ← add this
+
+    setReplacingKey(cardKey);
+    try {
+      const res = await fetch(
+        `${import.meta.env.VITE_API_ENDPOINT || "http://localhost:8787"}/api/replace-highlight`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            destination: plan.destination,
+            day,
+            currentTitle,
+            allHighlights: plan.highlights.map((h) => ({ title: h.title, date: h.date })),
+          }),
+        }
+      );
+      if (!res.ok) throw new Error("Failed to replace highlight");
+      const data = await res.json() as { highlight: Highlight };
+      onReplaceHighlight(day, currentTitle, data.highlight);
+    } catch (err) {
+      console.error("Replace failed:", err);
+    } finally {
+      setReplacingKey(null);
+    }
+  }
 
   if (isUser) {
     return <p className="leading-relaxed text-sm">{content}</p>;
@@ -74,7 +106,9 @@ export default function MessageContent({ content, plan, isUser }: MessageContent
 
     return (
       <motion.div variants={containerVariants} initial="hidden" animate="visible" className="space-y-5">
-        {/* Destination Overview */}
+        <motion.p variants={itemVariants} className="text-2xl font-bold font-display text-muted-foreground mb-2">
+          {plan.destination}
+        </motion.p>
         <motion.p variants={itemVariants} className="text-sm text-muted-foreground leading-relaxed">
           {plan.destinationOverview}
         </motion.p>
@@ -164,9 +198,16 @@ export default function MessageContent({ content, plan, isUser }: MessageContent
                                         <p className="text-xs text-muted-foreground leading-relaxed">
                                           {highlight.description}
                                         </p>
-                                        <button className="flex items-center gap-1.5 text-xs text-primary hover:text-primary/80 hover:underline transition-colors">
-                                          <RefreshCw className="w-3 h-3" />
-                                          Replace this activity
+                                        <button
+                                          onClick={() => handleReplace(highlight.date, highlight.title, key)}
+                                          disabled={replacingKey === key}
+                                          className="flex items-center gap-1.5 text-xs text-primary hover:text-primary/80 hover:underline transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                        >
+                                          {replacingKey === key
+                                            ? <Loader2 className="w-3 h-3 animate-spin" />
+                                            : <RefreshCw className="w-3 h-3" />
+                                          }
+                                          {replacingKey === key ? "Finding alternative…" : "Replace this activity"}
                                         </button>
                                       </div>
                                     </motion.div>

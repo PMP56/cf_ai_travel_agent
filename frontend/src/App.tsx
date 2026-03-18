@@ -3,7 +3,7 @@ import { Plane, PanelRight, Sun, Moon } from "lucide-react";
 import ChatWindow from "./components/ChatWindow";
 import InputBox from "./components/InputBox";
 import WelcomeScreen from "./components/WelcomeScreen";
-import type { ChatMessage, TravelAPIResponse } from "./types";
+import type { ChatMessage, Highlight, TravelAPIResponse } from "./types";
 
 const API_ENDPOINT = import.meta.env.VITE_API_ENDPOINT || "http://localhost:8787";
 
@@ -74,6 +74,28 @@ export default function Index() {
   const isEmpty = messages.length === 1;
   const hasPhotos = messages.some((m) => m.photos && m.photos.length > 0);
 
+  const handleReplaceHighlight = (
+    messageIdx: number,
+    day: string,
+    currentTitle: string,
+    replacement: Highlight
+  ) => {
+    setMessages((prev) =>
+      prev.map((msg, idx): ChatMessage => {
+        if (idx !== messageIdx || !msg.plan) return msg;
+        return {
+          ...msg,
+          plan: {
+            ...msg.plan,
+            highlights: msg.plan.highlights.map((h) =>
+              h.date === day && h.title === currentTitle ? replacement : h
+            ) as Highlight[],
+          },
+        };
+      })
+    );
+  };
+
   return (
     <div className="h-screen w-full flex flex-col bg-background overflow-hidden font-body">
       {/* Header */}
@@ -114,7 +136,12 @@ export default function Index() {
         {isEmpty ? (
           <WelcomeScreen onSend={handleSendMessage} />
         ) : (
-          <ChatWindow messages={messages} loading={loading} isGalleryVisible={isGalleryVisible} />
+          <ChatWindow
+            messages={messages}
+            loading={loading}
+            isGalleryVisible={isGalleryVisible}
+            onReplaceHighlight={handleReplaceHighlight}
+          />
         )}
         <InputBox onSend={handleSendMessage} disabled={loading} />
       </main>

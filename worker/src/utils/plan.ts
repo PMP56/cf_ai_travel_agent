@@ -5,6 +5,7 @@ export interface Highlight {
 }
 
 export interface TravelPlan {
+  destination: string;
   destinationOverview: string;   // destination + overview as markdown string
   highlights: Highlight[];
   optionalAddOns: string;        // add-ons + tips as markdown string
