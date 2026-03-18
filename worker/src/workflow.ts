@@ -69,44 +69,33 @@ export async function executeWorkflow(
   unsplashKey: string
 ): Promise<WorkflowResult> {
 
-  const [planResponse, destinationInfo] = await Promise.all([
-    ai.run("@cf/meta/llama-3.3-70b-instruct-fp8-fast", {
-      max_tokens: 2048,
-      messages: [
-        { role: "system", content: "You are a helpful travel planning assistant." },
-        { role: "user", content: buildPlanPrompt(message, userProfile) },
-      ],
-    }),
-    extractDestination(ai, message),
-  ]);
+  const planResponse = await ai.run("@cf/meta/llama-3.3-70b-instruct-fp8-fast", {
+    max_tokens: 2048,
+    messages: [
+      { role: "system", content: "You are a helpful travel planning assistant. Always respond with raw JSON only." },
+      { role: "user", content: buildPlanPrompt(message, userProfile) },
+    ],
+  });
 
   const plan = parsePlanResponse((planResponse as any).response);
 
-  const photos =
-    destinationInfo.destination && unsplashKey
-      ? await fetchDestinationPhotos(destinationInfo.destination, unsplashKey)
-      : [];
-
-  const memoryPrompt = `
-    Extract the user's travel preferences from this message:
-    "${message}"
-
-    Return a SINGLE short sentence summarizing stable preferences.
-
-    Examples:
-    - "Prefers budget-friendly beach vacations."
-    - "Likes adventure trips and hiking."
-    - "Enjoys cultural travel in Asia."
-
-    Return ONLY the sentence, no JSON, no formatting.
-  `;
-
-  const memoryResponse = await ai.run("@cf/meta/llama-3.3-70b-instruct-fp8-fast", {
-    messages: [
-      { role: "system", content: "Extract concise travel preferences as plain text." },
-      { role: "user", content: memoryPrompt },
-    ],
-  });
+  const [photos, memoryResponse] = await Promise.all([
+    plan.destination && unsplashKey
+      ? fetchDestinationPhotos(plan.destination, unsplashKey)
+      : Promise.resolve([]),
+    ai.run("@cf/meta/llama-3.3-70b-instruct-fp8-fast", {
+      messages: [
+        { role: "system", content: "Extract concise travel preferences as plain text." },
+        { role: "user", content: `Extract the user's travel preferences from this message: "${message}"
+            Return a SINGLE short sentence summarizing stable preferences.
+            Examples:
+            - "Prefers budget-friendly beach vacations."
+            - "Likes adventure trips and hiking."
+            Return ONLY the sentence, no JSON, no formatting.` 
+        },
+      ],
+    }),
+  ]);
 
   const extractedPrefs = (memoryResponse as any).response as string;
   const updatedPreferences = [
