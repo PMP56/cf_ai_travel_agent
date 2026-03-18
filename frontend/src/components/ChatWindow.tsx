@@ -1,5 +1,5 @@
 import { useEffect, useRef, useMemo } from "react";
-import { Loader2, Sparkles } from "lucide-react";
+import { Sparkles } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { ChatMessage } from "../types";
 import MessageContent from "./MessageContent";
