@@ -1,4 +1,4 @@
-import { MapPin, Compass, Plane, Sparkles } from "lucide-react";
+import { MapPin, Compass, Plane } from "lucide-react";
 import { motion } from "framer-motion";
 
 const suggestions = [
