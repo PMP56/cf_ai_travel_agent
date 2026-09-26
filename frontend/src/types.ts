@@ -74,6 +74,8 @@ export interface ClimateNormals {
 
 export interface ClimateGuidance {
   normals: ClimateNormals;
+  /** Every month, keyed by full English name — powers the year chart. */
+  year: Record<string, ClimateNormals>;
   summary: string;
   packing: string[];
   caution: string | null;

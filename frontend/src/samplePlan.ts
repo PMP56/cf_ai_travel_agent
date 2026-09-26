@@ -53,6 +53,152 @@ export const SAMPLE_PLAN: PlanResult = {
     }
   },
   "climate": {
+    "year": {
+      "January": {
+            "month": "January",
+            "yearsSampled": 5,
+            "avgHighC": 8.2,
+            "avgLowC": 0.5,
+            "avgPrecipitationMm": 50,
+            "rainyDayFraction": 0.22,
+            "recordHighC": 17.8,
+            "recordLowC": -6.8,
+            "avgWindKph": 15.5,
+            "peakWindKph": 38.2
+      },
+      "February": {
+            "month": "February",
+            "yearsSampled": 5,
+            "avgHighC": 9.1,
+            "avgLowC": 0.8,
+            "avgPrecipitationMm": 62,
+            "rainyDayFraction": 0.26,
+            "recordHighC": 18.7,
+            "recordLowC": -6.5,
+            "avgWindKph": 15.5,
+            "peakWindKph": 38.2
+      },
+      "March": {
+            "month": "March",
+            "yearsSampled": 5,
+            "avgHighC": 14.1,
+            "avgLowC": 3.9,
+            "avgPrecipitationMm": 95,
+            "rainyDayFraction": 0.3,
+            "recordHighC": 23.7,
+            "recordLowC": -3.4,
+            "avgWindKph": 15.5,
+            "peakWindKph": 38.2
+      },
+      "April": {
+            "month": "April",
+            "yearsSampled": 5,
+            "avgHighC": 19.5,
+            "avgLowC": 8.7,
+            "avgPrecipitationMm": 156,
+            "rainyDayFraction": 0.35,
+            "recordHighC": 29.1,
+            "recordLowC": 1.4,
+            "avgWindKph": 15.5,
+            "peakWindKph": 38.2
+      },
+      "May": {
+            "month": "May",
+            "yearsSampled": 5,
+            "avgHighC": 22.8,
+            "avgLowC": 13.3,
+            "avgPrecipitationMm": 164,
+            "rainyDayFraction": 0.33,
+            "recordHighC": 32.4,
+            "recordLowC": 6.0,
+            "avgWindKph": 15.5,
+            "peakWindKph": 38.2
+      },
+      "June": {
+            "month": "June",
+            "yearsSampled": 5,
+            "avgHighC": 26.9,
+            "avgLowC": 19.1,
+            "avgPrecipitationMm": 240,
+            "rainyDayFraction": 0.45,
+            "recordHighC": 36.5,
+            "recordLowC": 11.8,
+            "avgWindKph": 15.5,
+            "peakWindKph": 38.2
+      },
+      "July": {
+            "month": "July",
+            "yearsSampled": 5,
+            "avgHighC": 31.7,
+            "avgLowC": 23.6,
+            "avgPrecipitationMm": 235,
+            "rainyDayFraction": 0.42,
+            "recordHighC": 41.3,
+            "recordLowC": 16.3,
+            "avgWindKph": 15.5,
+            "peakWindKph": 38.2
+      },
+      "August": {
+            "month": "August",
+            "yearsSampled": 5,
+            "avgHighC": 32.6,
+            "avgLowC": 24.2,
+            "avgPrecipitationMm": 150,
+            "rainyDayFraction": 0.31,
+            "recordHighC": 42.2,
+            "recordLowC": 16.9,
+            "avgWindKph": 15.5,
+            "peakWindKph": 38.2
+      },
+      "September": {
+            "month": "September",
+            "yearsSampled": 5,
+            "avgHighC": 29.5,
+            "avgLowC": 20.8,
+            "avgPrecipitationMm": 198,
+            "rainyDayFraction": 0.36,
+            "recordHighC": 39.1,
+            "recordLowC": 13.5,
+            "avgWindKph": 15.5,
+            "peakWindKph": 38.2
+      },
+      "October": {
+            "month": "October",
+            "yearsSampled": 5,
+            "avgHighC": 22.6,
+            "avgLowC": 14.2,
+            "avgPrecipitationMm": 120,
+            "rainyDayFraction": 0.27,
+            "recordHighC": 32.2,
+            "recordLowC": 6.9,
+            "avgWindKph": 15.5,
+            "peakWindKph": 38.2
+      },
+      "November": {
+            "month": "November",
+            "yearsSampled": 5,
+            "avgHighC": 16.8,
+            "avgLowC": 8.1,
+            "avgPrecipitationMm": 80,
+            "rainyDayFraction": 0.24,
+            "recordHighC": 26.4,
+            "recordLowC": 0.8,
+            "avgWindKph": 15.5,
+            "peakWindKph": 38.2
+      },
+      "December": {
+            "month": "December",
+            "yearsSampled": 5,
+            "avgHighC": 10.7,
+            "avgLowC": 2.9,
+            "avgPrecipitationMm": 55,
+            "rainyDayFraction": 0.21,
+            "recordHighC": 20.3,
+            "recordLowC": -4.4,
+            "avgWindKph": 15.5,
+            "peakWindKph": 38.2
+      }
+},
     "normals": {
       "month": "April",
       "yearsSampled": 5,

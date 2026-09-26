@@ -208,6 +208,25 @@ export default function App() {
                 />
               </div>
 
+              {/* Context comes BEFORE the itinerary. Weather and the character of
+                  the place are what you check before reading day one, and at the
+                  foot of the page they sat behind five day cards. */}
+              {result && (result.destination || result.climate) && (
+                <div className="grid lg:grid-cols-2 gap-3">
+                  {result.destination && <DestinationPanel brief={result.destination} />}
+                  {result.climate && (
+                    <ClimatePanel
+                      climate={result.climate}
+                      onPickMonth={
+                        brief && !plan.isSample
+                          ? (month) => plan.replan({ ...brief, travelMonth: month }, place)
+                          : undefined
+                      }
+                    />
+                  )}
+                </div>
+              )}
+
               {itinerary && (
                 <ItineraryView
                   itinerary={itinerary}
@@ -222,10 +241,8 @@ export default function App() {
                 />
               )}
 
-              {result && (
-                <div className="grid sm:grid-cols-2 gap-3">
-                  {result.destination && <DestinationPanel brief={result.destination} />}
-                  {result.climate && <ClimatePanel climate={result.climate} />}
+              {result && (result.food || result.critique) && (
+                <div className="grid lg:grid-cols-2 gap-3">
                   {result.food && <FoodPanel food={result.food} />}
                   {result.critique && <CritiquePanel critique={result.critique} />}
                 </div>

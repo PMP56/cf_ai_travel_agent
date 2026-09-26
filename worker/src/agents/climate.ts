@@ -1,5 +1,5 @@
 import { runStructured } from "../utils/structured";
-import { getClimateNormals, ClimateNormals, ClimateFetchError } from "../tools/climate";
+import { getClimateYear, ClimateNormals, ClimateYear, ClimateFetchError } from "../tools/climate";
 import { TripBrief } from "../schema/trip";
 import { ResolvedPlace } from "../tools/geocode";
 
@@ -48,6 +48,13 @@ const CLIMATE_JSON_SCHEMA = {
 
 export interface ClimateGuidance {
   normals: ClimateNormals;
+  /**
+   * Every month, not just the one asked for. The archive request already
+   * returns five years of daily data, so all twelve are computed either way —
+   * discarding eleven of them threw away the answer to the question travellers
+   * actually ask, which is whether they picked the right month.
+   */
+  year: ClimateYear;
   summary: string;
   packing: string[];
   caution: string | null;
@@ -81,10 +88,9 @@ export async function runClimateAgent(
 ): Promise<ClimateGuidance | null> {
   if (!brief.travelMonth) return null;
 
-  const normals = await getClimateNormals(
+  const year = await getClimateYear(
     place.latitude,
     place.longitude,
-    brief.travelMonth,
     place.timezone
   ).catch((err) => {
     // A failed request is not the same as a location with no data. Both degrade
@@ -97,6 +103,9 @@ export async function runClimateAgent(
     return null;
   });
 
+  if (!year) return null;
+
+  const normals = year[brief.travelMonth];
   if (!normals) return null;
 
   const placeLabel = [place.name, place.country].filter(Boolean).join(", ");
@@ -118,6 +127,7 @@ export async function runClimateAgent(
 
   return {
     normals,
+    year,
     summary: typeof raw?.summary === "string" ? raw.summary.trim() : "",
     packing,
     caution: typeof raw?.caution === "string" && raw.caution.trim() ? raw.caution.trim() : null,

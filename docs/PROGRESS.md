@@ -137,6 +137,29 @@ Assumptions made while writing these docs — correct any that are wrong.
 
 ## Session log
 
+### 2026-09-26 — Supporting panels turned into instruments
+The four panels below the itinerary were boxes of grey prose, so genuinely useful material — a
+warning about photographing geiko, a month that rains a third of the time — read as filler.
+
+The climate panel is the substantive change. `getClimateYear` already computes **all twelve months**
+from the single archive request and the agent was discarding eleven of them, which threw away the
+answer to the question travellers actually ask: is this the right month to go? It now returns the
+whole year, and the panel draws it as a temperature band with a rain channel beneath. **Clicking any
+month re-plans for it**, reusing the brief-edit path rather than inventing a second way to change a
+trip. Three stat tiles lead with the figures that change what you pack.
+
+The review panel said "No issues found" and nothing else. It now lists what was actually checked —
+walking distance, stops against pace, duplicates, empty days, non-places, ordering — because an
+empty result is more convincing when it shows its work, and it matches the transparency the pipeline
+rail already provides.
+
+Prose blocks in "the place" became icon callouts, so a safety warning looks like a warning. Both
+context panels moved **above** the itinerary: weather and the character of a place are what you read
+before day one, and behind five day cards they were never seen.
+
+Two things caught by looking rather than reasoning: the rain channel was drawn with raw opacity,
+which made a 20% month and a 45% month indistinguishable, and the chart had no scale at all.
+
 ### 2026-09-26 — Sample plan, so the UI can be seen without spending credit
 Added `frontend/src/samplePlan.ts` and a "see a finished plan" button on the cold-start screen. It
 renders the complete workspace instantly with no network call and no model call — verified by
