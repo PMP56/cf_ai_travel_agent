@@ -1,5 +1,5 @@
 import { Suspense, lazy, useEffect, useState } from "react";
-import { TriangleAlert } from "lucide-react";
+import { TriangleAlert, Eye } from "lucide-react";
 import { usePlanStream } from "./usePlanStream";
 import type { CuratedPlace, Itinerary } from "./types";
 import {
@@ -116,6 +116,15 @@ export default function App() {
 
             <PromptBar onSubmit={plan.submit} onCancel={plan.cancel} running={plan.running} />
 
+            <button
+              type="button"
+              onClick={plan.showSample}
+              className="figure mt-3 inline-flex items-center gap-1.5 px-2.5 py-1.5 border border-rule rounded-xs text-ink-soft hover:border-ink-faint hover:text-ink transition-colors"
+            >
+              <Eye className="w-3 h-3" aria-hidden />
+              see a finished plan — no account, no waiting
+            </button>
+
             {/* The sources are the product's argument, so they get stated up front. */}
             <dl className="grid grid-cols-2 sm:grid-cols-4 gap-px mt-10 bg-rule border border-rule rounded-sm overflow-hidden">
               {[
@@ -161,6 +170,22 @@ export default function App() {
                       start over
                     </button>
                   </div>
+                </div>
+              )}
+
+              {plan.isSample && (
+                <div className="flex items-center gap-2 border border-accent/40 bg-accent/5 rounded-sm px-3 py-2">
+                  <Eye className="w-3.5 h-3.5 text-accent shrink-0" aria-hidden />
+                  <p className="figure text-ink-soft flex-1">
+                    Sample plan — real places and real data, generated earlier. Nothing is running.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={plan.reset}
+                    className="figure px-2 py-1 border border-rule-strong rounded-xs hover:border-ink-faint transition-colors"
+                  >
+                    plan your own
+                  </button>
                 </div>
               )}
 

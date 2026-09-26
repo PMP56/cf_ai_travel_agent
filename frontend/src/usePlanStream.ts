@@ -1,5 +1,6 @@
 import { useCallback, useRef, useState } from "react";
 import { AGENT_ORDER } from "./types";
+import { SAMPLE_PLAN } from "./samplePlan";
 import type {
   AgentName,
   AgentState,
@@ -18,6 +19,8 @@ function idleAgents(): Record<AgentName, AgentState> {
 }
 
 export interface PlanStreamState {
+  /** True when showing the bundled sample rather than a generated plan. */
+  isSample: boolean;
   /** True from submit until the stream closes. */
   running: boolean;
   agents: Record<AgentName, AgentState>;
@@ -41,6 +44,7 @@ export interface PlanStreamState {
  */
 export function usePlanStream() {
   const [state, setState] = useState<PlanStreamState>({
+    isSample: false,
     running: false,
     agents: idleAgents(),
     brief: null,
@@ -140,6 +144,7 @@ export function usePlanStream() {
       const editing = "brief" in payload;
 
       setState((prev) => ({
+        isSample: false,
         running: true,
         agents: idleAgents(),
         // Keep the edited brief on screen through the re-run: blanking it would
@@ -225,6 +230,7 @@ export function usePlanStream() {
     abortRef.current = null;
     stopClock();
     setState({
+      isSample: false,
       running: false,
       agents: idleAgents(),
       brief: null,
@@ -236,10 +242,48 @@ export function usePlanStream() {
     });
   }, [stopClock]);
 
+  /**
+   * Load the bundled sample instantly — no network, no model, no credit spent.
+   * The agent rail is filled in with plausible timings so the finished state of
+   * the pipeline panel is visible too.
+   */
+  const showSample = useCallback(() => {
+    abortRef.current?.abort();
+    abortRef.current = null;
+    stopClock();
+
+    const timings: Record<string, [number, string]> = {
+      intake: [2997, "Kyoto → Kyoto, Japan"],
+      destination: [5010, "Kyoto guide"],
+      climate: [4424, "19.5/8.7C in April"],
+      places: [7975, "12 places"],
+      food: [4004, "6 dishes"],
+      composer: [8705, "5 days, 6.5km"],
+      critic: [539, "approved, 0 note(s)"],
+    };
+
+    setState({
+      isSample: true,
+      running: false,
+      agents: Object.fromEntries(
+        AGENT_ORDER.map((a) => {
+          const [ms, detail] = timings[a];
+          return [a, { status: "done" as const, ms, detail }];
+        })
+      ) as PlanStreamState["agents"],
+      brief: SAMPLE_PLAN.brief,
+      place: SAMPLE_PLAN.place,
+      alternatives: [],
+      result: SAMPLE_PLAN,
+      error: null,
+      elapsedMs: 20200,
+    });
+  }, [stopClock]);
+
   const replan = useCallback(
     (brief: TripBrief, place: ResolvedPlace | null) => run({ brief, place }),
     [run]
   );
 
-  return { ...state, submit, replan, cancel, reset };
+  return { ...state, submit, replan, cancel, reset, showSample };
 }

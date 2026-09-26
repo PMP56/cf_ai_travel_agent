@@ -137,6 +137,23 @@ Assumptions made while writing these docs — correct any that are wrong.
 
 ## Session log
 
+### 2026-09-26 — Sample plan, so the UI can be seen without spending credit
+Added `frontend/src/samplePlan.ts` and a "see a finished plan" button on the cold-start screen. It
+renders the complete workspace instantly with no network call and no model call — verified by
+screenshotting it with the worker not running at all.
+
+This exists because of the constraint above: the free tier is about seven plans a day and local
+`wrangler dev` draws on the same allowance, so a session spent adjusting layout runs out of credit
+long before the layout is right.
+
+The fixture is **real data**, not invented placeholders — coordinates, Wikipedia pageview figures,
+lead image URLs and the April climate normals were all pulled from the live pipeline, and the
+inter-stop distances are computed with the same haversine the composer uses. Only the day themes and
+notes are hand-written. Judging a design against fabricated data means judging the wrong thing.
+
+A banner states plainly that it is a sample and offers "plan your own", so it cannot be mistaken for
+a generated plan.
+
 ### 2026-09-26 — Bounce-back on failure; Workers AI free tier exhausted
 Clicking an example destination flashed the workspace and returned to the cold-start screen.
 Reproduced in a headless browser and instrumented the stream hook: `run()` fired once, nothing
