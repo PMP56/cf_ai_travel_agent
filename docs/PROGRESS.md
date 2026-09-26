@@ -3,10 +3,40 @@
 Living status file. Newest session log entry goes on top.
 
 ## Current focus
-**v2 direction agreed — see `docs/PLAN-v2.md`.** The project is becoming a grounded multi-agent
+**Phase 0 in progress on branch `v2` — see `docs/PLAN-v2.md`.** The project is becoming a grounded multi-agent
 travel workspace rather than a chat app. Decisions locked: all Workers AI (zero marginal cost),
 keyless data sources only, evolve the existing worker on a `v2` branch, MapLibre + OSM for maps.
-Next step is Phase 0: `TripBrief` schema, JSON Mode, and one grounded tool end to end.
+Phase 0 has landed the pattern: `schema/`, `tools/`, `agents/` split, JSON Mode via
+`utils/structured.ts`, two keyless tools (geocoding, climate normals) and two agents (intake,
+climate), behind `POST /api/v2/brief`. **v2 is ready to release** — v1 code removed, README rewritten, all checks green.
+**UI reworked against real screenshots.** **Phase 5 hardening underway** — 73 tests, origin allowlist, per-IP rate limiting.
+**Phase 4 (direct manipulation) built.** **Phase 3 (UI) built** — the frontend is rewritten around
+the workspace model. **Phase 2 done**
+apart from Workflows, which is a deliberate decision rather than a task (see below). **Phase 1 complete.** Intake plus four grounded specialists — destination, climate, places, food —
+all verified against a real model and fanning out in parallel. Places produces correct shortlists for Kyoto, Florence
+and Marrakesh with real coordinates throughout. The pipeline is extracted into `pipeline.ts` and streams progress over SSE at
+`POST /api/v2/stream`, which is the feed Phase 3's activity strip needs. A Kyoto run: intake 3.0s,
+four specialists in parallel 3.1-8.0s, composer 8.7s, critic 0.5s, 20.2s total.
+
+**Workflows is blocked on two upgrades and is not urgent.** It needs a current wrangler (project is
+on v3.114, v4 is current) and a recent `compatibility_date` (project is on 2024-01-01). Both are
+existing backlog items, both touch the deployed worker, and both deserve their own verified change
+rather than being smuggled in. Workflows earns its keep when losing a run is expensive; at 20
+seconds and effectively zero cost, it is not yet. Recommend doing the upgrades deliberately, then
+Workflows, rather than blocking Phase 3 on it.
+
+The region-anchor problem is now **visible rather than silent** — a Patagonia trip returns one
+scheduled day and the critic reports "13 of 14 days have nothing scheduled". That is the right
+behaviour, but the underlying gap still needs the Wikivoyage-region-links fix.
+
+**Efficiency note for Phase 2:** the destination and food agents each fetch the same Wikivoyage
+guide independently, so a single brief makes 2-4 redundant calls. Caching guides in a Durable Object
+is the obvious fix and pairs naturally with Workflows.
+
+**Known limitation — remote destinations.** Wikipedia geosearch caps at a 10km radius and tiling
+reaches ~46km, but Perito Moreno Glacier is ~78km from El Calafate, so a Patagonia trip currently
+finds only Lake Argentino. The town is the wrong anchor for a region trip; a likely fix is
+discovering places via the Wikivoyage region page's linked destinations rather than by radius.
 
 Hygiene pass complete. The Unsplash key has been rotated, the leaked value is dead, and the new one
 is set as a deployed Cloudflare secret. Cloudflare login is active, so `wrangler dev` can now serve
@@ -100,11 +130,328 @@ Assumptions made while writing these docs — correct any that are wrong.
 | 2026-09-26 | `UNSPLASH_SECRET_KEY` deliberately not deployed anywhere | Only used for Unsplash OAuth user-auth; this app does public search with `Client-ID` alone |
 | 2026-09-26 | Photos degrade to `[]` when the key is absent rather than erroring | Keeps local dev usable without a key; the guard already existed, the types now match it |
 | 2026-09-26 | Hardening (CORS, rate limits, real identity) kept in the backlog but ranked below correctness | Demo today, real users later — deferred, explicitly not dropped |
+| 2026-09-26 | Host stays Cloudflare; $5/mo Workers Paid budgeted before any public demo | Only platform bundling free inference + DO + Workflows + WS + hosting on one free tier; free tier is only ~6-7 plans/day (see PLAN-v2 §5) |
+| 2026-09-26 | `utils/structured.ts` is the only file allowed to call the model | Keeps the provider swappable; it is the hedge against the Workers AI quality ceiling, and costs nothing to maintain now |
 | 2026-09-26 | Prashanna is the sole committer; no attribution trailers, and Claude never runs `git commit` | His instruction, marked very important; enforced by a deny rule in `.claude/settings.json` |
 | 2026-03-18 | (from `5ceade4`) Photos and preference extraction run under `Promise.all` | Independent calls; cuts a round trip off `/api/generate` |
 | 2026-03-18 | (from `4b4f976`) Single-activity replacement sends the whole itinerary to the model | Cheapest way to stop it suggesting an activity already in the plan |
 
 ## Session log
+
+### 2026-09-26 — Removed v1; prepared v2 for release
+The frontend had stopped calling v1 entirely, so `/api/generate`, `/api/replace-highlight` and
+`/api/profile/:userId` were dead weight along with `workflow.ts`, `utils/prompts.ts`, `utils/plan.ts`
+and `utils/photos.ts`. All removed; the removed routes now 404 and the v2 stream is unaffected.
+
+Unsplash is gone with them — v2 takes every image from Wikipedia — so the worker needs no secrets at
+all. The rotated key can be deleted from the deployed worker.
+
+**Feature regression worth naming:** `UserMemory` was only ever read by the v1 routes, so v2 has no
+persistent memory. The Durable Object is still bound and exported, because deleting a DO class needs
+a migration, but nothing writes to it. v1 remembered a rolling list of preferences per user and v2
+does not. This is the first thing to fix after release.
+
+### 2026-09-26 — Supporting panels turned into instruments
+The four panels below the itinerary were boxes of grey prose, so genuinely useful material — a
+warning about photographing geiko, a month that rains a third of the time — read as filler.
+
+The climate panel is the substantive change. `getClimateYear` already computes **all twelve months**
+from the single archive request and the agent was discarding eleven of them, which threw away the
+answer to the question travellers actually ask: is this the right month to go? It now returns the
+whole year, and the panel draws it as a temperature band with a rain channel beneath. **Clicking any
+month re-plans for it**, reusing the brief-edit path rather than inventing a second way to change a
+trip. Three stat tiles lead with the figures that change what you pack.
+
+The review panel said "No issues found" and nothing else. It now lists what was actually checked —
+walking distance, stops against pace, duplicates, empty days, non-places, ordering — because an
+empty result is more convincing when it shows its work, and it matches the transparency the pipeline
+rail already provides.
+
+Prose blocks in "the place" became icon callouts, so a safety warning looks like a warning. Both
+context panels moved **above** the itinerary: weather and the character of a place are what you read
+before day one, and behind five day cards they were never seen.
+
+Two things caught by looking rather than reasoning: the rain channel was drawn with raw opacity,
+which made a 20% month and a 45% month indistinguishable, and the chart had no scale at all.
+
+### 2026-09-26 — Sample plan, so the UI can be seen without spending credit
+Added `frontend/src/samplePlan.ts` and a "see a finished plan" button on the cold-start screen. It
+renders the complete workspace instantly with no network call and no model call — verified by
+screenshotting it with the worker not running at all.
+
+This exists because of the constraint above: the free tier is about seven plans a day and local
+`wrangler dev` draws on the same allowance, so a session spent adjusting layout runs out of credit
+long before the layout is right.
+
+The fixture is **real data**, not invented placeholders — coordinates, Wikipedia pageview figures,
+lead image URLs and the April climate normals were all pulled from the live pipeline, and the
+inter-stop distances are computed with the same haversine the composer uses. Only the day themes and
+notes are hand-written. Judging a design against fabricated data means judging the wrong thing.
+
+A banner states plainly that it is a sample and offers "plan your own", so it cannot be mistaken for
+a generated plan.
+
+### 2026-09-26 — Bounce-back on failure; Workers AI free tier exhausted
+Clicking an example destination flashed the workspace and returned to the cold-start screen.
+Reproduced in a headless browser and instrumented the stream hook: `run()` fired once, nothing
+aborted, and the SSE stream closed 264ms in with HTTP 200. The worker was reporting
+
+    4006: you have used up your daily free allocation of 10,000 neurons
+
+which is precisely the budget calculated in PLAN-v2 §5 — about 1,450 neurons a plan against
+10,000/day, so roughly seven plans. A day of testing spent it.
+
+The quota is a constraint, not a bug, but it exposed two real ones.
+
+**The workspace unmounted on failure.** `started` was `running || brief || result`, so a failed run
+cleared `running` while brief and result were still null — the workspace disappeared and took the
+error message with it, since the error renders inside the workspace. `started` now includes `error`,
+and there is a "start over" control to get back deliberately.
+
+**The real reason was being discarded.** Intake ran through the generic `stage()` wrapper, which
+swallowed the cause and reported every failure as "Could not understand the request" — sending
+people off to rewrite a perfectly good sentence. Intake is now handled inline so the cause survives,
+and `explainFailure()` maps the common upstream faults (quota, rate limit, timeout) to something
+actionable. Six tests cover it; one caught that the matcher looked for "timeout" while the real
+wording is "timed out".
+
+**Note for whoever hits this next:** the free tier really is about seven plans a day. Local
+`wrangler dev` spends the same quota as production, so a testing session exhausts it quickly.
+
+### 2026-09-26 — UI rework, driven by actual screenshots
+Installed Playwright and drove a headless browser so the interface could be looked at rather than
+reasoned about. That immediately found three bugs no amount of code review would have caught.
+
+**The fonts had never loaded.** `@import` for Google Fonts sat inside `index.css` after Tailwind's
+expanded output, and CSS requires `@import` to precede all other statements, so the browser silently
+dropped it — `document.fonts.size` was 0 and everything rendered in Georgia and system-ui. The whole
+typographic direction had never actually been seen. Moved to a `<link>` in index.html with
+preconnect; 44 faces now load.
+
+**Day colours resolved to nothing.** `dayColour()` returned `var(--color-day-N)`, but Tailwind v4's
+`@theme inline` substitutes those values into utilities at build time and never emits them as
+runtime custom properties. Probed it directly: `--color-day-1` was empty and fell back to ink, which
+is why every day badge was a blank circle and every map pin a grey blob. Now references the raw
+`--day-N` properties on `:root`.
+
+**MapLibre owns the marker transform.** The pins were meant to be rotated teardrops, but MapLibre
+writes `transform: translate()` on the marker root to position it, overwriting the rotation — so the
+pin never rotated while its counter-rotating label did, leaving tilted digits. Rebuilt as a circle
+with a bordered pseudo-element pointer, depending on no transform at all.
+
+Beyond the bugs: added Wikipedia lead images to the places tool (same batched call, 9/10 places have
+one), which is what actually fixes "too plain" — the page is now anchored by photographs of real
+places rather than decorated with stock imagery. Day cards replace the flat list, with numbered
+badges colour-matched to the map pins; category icons from lucide; example destinations as cards
+rather than three stacked paragraphs of grey text; sources stated on the cold-start screen; content
+column widened to reclaim ~350px of dead space.
+
+Lesson worth keeping: three of these were invisible in code and obvious in a screenshot. Anything
+visual needs to be looked at before it is called done.
+
+### 2026-09-26 — Phase 5: tests and hardening
+Added the test suite this project has never had: 57 in the worker (clustering, trip normalisation,
+`parseAiJson`, CORS, rate limiting) and 16 in the frontend (itinerary edits), running in ~150ms
+each. The cases deliberately encode bugs that actually happened rather than hypothetical ones —
+the 3/3/3/1/1 clustering imbalance, sentinel-to-null normalisation, fence-stripped model output,
+and origin lookalikes.
+
+Replaced origin reflection with an allowlist. The old `corsHeaders` echoed whatever `Origin`
+arrived, so any site could call the worker from a visitor's browser and burn the Workers AI quota;
+`travel-agent-111.pages.dev.evil.com` now fails, where before it passed.
+
+Added per-IP rate limiting at 5 plans/minute on the expensive routes. A plan is seven model calls
+at ~1,450 neurons, against a 10,000/day free tier — roughly seven plans is the entire daily budget,
+so one script could exhaust it. Deliberately isolate-local: each edge location enforces its own
+budget and a cold isolate starts fresh, which makes it a brake on casual abuse rather than a
+security control. A real limit needs a Durable Object or Cloudflare's rate-limiting binding.
+
+Two notes. The limiter counts requests that fail validation, so probing with malformed bodies still
+costs budget — deliberate, but it means a user fat-fingering a request burns an allowance.
+And verification nearly went wrong: the first clean-worker run failed to bind because a stale
+`workerd` still held port 8787, so the checks had been served by an instance whose provenance was
+unclear. Freed the port and re-ran against a confirmed-fresh instance before believing the results.
+
+### 2026-09-26 — Phase 4: direct manipulation
+The pipeline now accepts either a message or an **edited brief**. Supplying a brief skips intake
+entirely, so changing "relaxed" to "packed" reconverges against the same structured intent rather
+than re-parsing a new sentence and drifting to a different trip. This is the capability a chat app
+structurally cannot offer, and it is now demonstrable: the same Kyoto brief at `packed` returns 3
+denser days and 16.9km instead of 4 days and 19.2km, with `intake skipped: brief supplied`.
+
+Brief fields are click-to-edit (Enter commits, Escape abandons, keyboard reachable throughout), and
+the itinerary supports reorder, move-to-day, remove and swap-for-an-unscheduled-place, each
+recomputing distances so the kilometre figures never go stale. Edits are tagged with the result they
+were made against and resolved during render, so a newer plan supersedes them without a `setState`
+in an effect.
+
+**Deliberately not drag-and-drop.** Dragging needs a whole parallel affordance to be keyboard
+operable, and "move to day 3" from a select is clearer than dropping a card into the right gap.
+
+Testing the replan exposed a real bug: pace set the number of days but never capped the number of
+places, so a "relaxed 4 days" in Kyoto returned 11 sights across 4 days — which is not relaxed. Pace
+now caps capacity at `days x perDay` and holds the rest back as swap candidates. Measured:
+relaxed 2/day 8.1km, moderate 2-3/day 15.2km, packed 4/day 22.3km.
+
+### 2026-09-26 — Phase 3: the frontend, rebuilt
+Discarded the chat UI entirely and rebuilt around the workspace model. Research shaped two
+decisions. On agent UX, current practice is to expose tool execution — each call, its elapsed time,
+its result — rather than hide it, so the pipeline telemetry became a first-class panel instead of a
+spinner. On visual design, the documented backlash is against the house style the old UI was a
+textbook example of: pastel gradients, soft rounded cards, friendly sans-serif, decorative fluff.
+The counter-direction is editorial typography and real data shown as data.
+
+So the design is a **field dossier**: Instrument Serif for place names, Inter for interface, and
+JetBrains Mono for anything measured. Coordinates, kilometres, pageviews-per-day and degrees are
+all on screen, because "nothing here was invented" is the product's actual claim and the interface
+should show receipts rather than ask for trust.
+
+New: `usePlanStream` (fetch + reader, since EventSource cannot POST), `AgentRail`, `BriefBar`,
+`ItineraryView`, `MapView` (MapLibre + OSM, markers coloured by day), `Dossier` panels, `PromptBar`.
+Deleted all six old components. Accessibility was designed in, not retrofitted: focus-visible rings,
+`prefers-reduced-motion`, aria-live on the running clock, screen-reader text for the status glyphs,
+and labelled controls.
+
+MapLibre is ~1MB, so it is lazy-loaded — the cold-start screen has no map, and the initial bundle
+went from 353kB gzipped to 67kB.
+
+Superseded — the UI has since been screenshotted and reworked; see the entry above.
+
+### 2026-09-26 — Progress streaming and caching
+Extracted the pipeline out of the route handler into `pipeline.ts` so one implementation serves both
+the JSON endpoint and a new SSE endpoint at `POST /api/v2/stream`. SSE rather than WebSockets:
+progress is strictly one-way, so a socket would add a Durable Object and a connection lifecycle for
+nothing, and EventSource reconnects by itself. Every stage reports start, duration and a one-line
+summary — a full plan takes 20-60s, far too long for a spinner. The stream makes the parallelism
+visible: all four specialists start at the same instant.
+
+Added an isolate-local TTL cache over all four tools. The concrete problem was duplication inside a
+single request — destination and food each fetched the same Wikivoyage guide — and concurrent
+callers now share one in-flight promise. Failures are deliberately never cached, since caching a
+rate-limited miss would turn a transient fault into a sticky one.
+
+Honest measurement: end-to-end agent timings barely moved, because they are dominated by model
+latency rather than fetches. The cache's value is fewer upstream calls against keyless rate-limited
+APIs — which has been the root cause of several silent-data-loss bugs here — not speed.
+
+### 2026-09-26 — Phase 2: composer and critic
+Which places share a day is geometry, not judgement, so `tools/cluster.ts` decides it in code —
+deterministic, free, and the first piece here testable with no network and no model. Greedy
+seeding from the most remote unassigned place, then nearest neighbours; measured at 27% less
+travel than rank order on Kyoto (38.3km vs 52.7km). The composer supplies only the day theme,
+within-day order and a practical note, and its day assignments are **not trusted**: if it moves a
+place between days the clustering stands and only its prose is kept.
+
+First run revealed the slot formula front-loaded — Kyoto came out 3/3/3/1/1 because it reserved
+only one place per remaining day rather than a fair share. Now re-divides what is left across the
+days still to fill; verified balanced across eight shapes including more days than places.
+
+The critic splits the same way: arithmetic faults (distance, density, duplicates, empty days) are
+computed, because a model asked to check them will sometimes agree that 40km is a pleasant stroll;
+the model judges only what arithmetic cannot — non-places, nonsensical ordering, notes that
+contradict the weather. Its prompt states that an empty list is a valid and common answer, and on
+a good Kyoto itinerary it correctly returns zero defects rather than inventing one.
+
+Also worth recording: wiring the composer in silently did nothing, because a `str.replace()`
+pattern did not match and I had omitted the assert used elsewhere. Same failure shape this project
+keeps producing — a no-op presenting as success. Every scripted edit now asserts its match.
+
+### 2026-09-26 — Food specialist; Phase 1 complete
+Added the food agent over the Wikivoyage Eat/Drink sections. It deliberately does not name
+restaurants: specific venues are the worst thing for an AI planner to invent, and the keyless
+sources cannot support them anyway (OSM gives local-script names with no quality signal). What the
+guides carry reliably is what a place eats and how dining works, which is the more useful half.
+
+First run exposed a truncation bug rather than a model failure. Kyoto returned only "ramen, kaiseki"
+and a blank dietary note for a vegetarian traveller — because the tool truncated sections at 1,200
+chars while Kyoto's Eat section is 4,501, so the model never saw shojin ryori or yatsuhashi at all.
+Its silence was correct for the input it was given. Raising the limit to 4,500 for food (input
+tokens cost a fraction of output) now yields kaiseki, yatsuhashi, matcha ice cream, shojin ryori,
+hamo and tofu, and correctly points a vegetarian at shojin ryori.
+
+Worth remembering: when a grounded agent underperforms, check what it was actually shown before
+touching the prompt.
+
+### 2026-09-26 — Destination specialist
+Added `tools/wikivoyage.ts` and the destination agent. Uses plain-text extracts rather than
+wikitext — the markup is inconsistent between articles and not worth parsing, while `explaintext`
+returns clean prose with headers intact. Article titles resolve through search, so "Marrakesh"
+correctly finds "Marrakech".
+
+Where a region page is thin (Patagonia has only a lead paragraph) the agent prefers the gateway
+city's fuller guide. Three specialists now fan out in parallel.
+
+Two things worth recording from the verification run. Marrakesh produced genuinely local safety
+advice — the "this street is closed" scam — which is exactly the kind of thing a model recalling
+from memory would replace with generic pickpocket warnings. And for El Calafate, whose guide covers
+neither safety nor etiquette, the model returned empty strings rather than inventing them, so the
+"return blank rather than fill from your own knowledge" instruction holds under test.
+
+### 2026-09-26 — Places: three layers of silent data loss
+Chased the missing Uffizi. It was not one bug but three, each hiding the next, and all of the same
+shape: partial results that looked like absence.
+
+1. Tiled searches produced ~1,500 candidates, so 30 pageview batches fired at once and Wikipedia
+   rate-limited them. A throttled batch scored its titles zero, which put them under the notability
+   threshold. Fixed with bounded concurrency (4) and one retry, and by failing loudly when ANY batch
+   is lost rather than only when all are.
+2. The 300-candidate cap sorted by distance, but Florence's centre has 300+ geotagged articles
+   inside 400m — so the cap discarded notable places by proximity. Cities now use a single 10km
+   search (no tiling at all; it added candidates without adding reach) and the cap is 500.
+3. The real one: MediaWiki paginates `prop=pageviews`. On a 50-title batch it returns PARTIAL data
+   plus a `continue` token and no error, so `Uffizi` came back with no pageviews field while its
+   neighbours in the same response had one. Now follows continuation to completion.
+
+All three were the same failure mode the climate tool had: something incomplete presenting as
+something empty. Verified: Florence 5/5 landmarks, Kyoto 4/4, Marrakesh 3/3.
+
+With the tool fixed, `Nintendo` surfaced at 3,352/day in Kyoto (its HQ is geotagged there) — and the
+model filter correctly rejected it, along with Heian-kyo, Kyoto Prefecture and the Medici person.
+That is the two-layer split working as designed.
+
+### 2026-09-26 — Phase 1: places specialist
+Built the keyless places pipeline and the agent on top of it. Three plan assumptions turned out to
+be wrong and were corrected: REST Countries v5 now needs an API key (so it leaves the keyless
+stack), Overpass returns local-script names and ranks a records office level with Kinkaku-ji, and
+Wikivoyage listing markup is inconsistent between articles. What works is Wikipedia geosearch ranked
+by pageviews — roughly 100x separation between attractions and noise.
+
+Ranking alone was not enough: it surfaced people, events, artworks, administrative areas and
+neighbouring towns. Rather than grow a blocklist, the agent hands the model the ranked candidates
+and has it select BY INDEX, so every name and coordinate still comes from the tool and a
+hallucinated place is structurally impossible. Result for Kyoto: Fushimi Inari, Kiyomizu-dera,
+Kinkaku-ji, Nijo Castle, Gion, Arashiyama — correct, with the noise gone. Florence likewise.
+
+The Uffizi gap was chased down and fixed — see the next entry. Remote destinations remain weak
+because geosearch caps at a 10km radius, and the "why" clauses sometimes restate the place name.
+
+### 2026-09-26 — Phase 0 verified end to end
+Ran the agent path against a real model. Intake handled both test messages correctly, including
+leaving `pace`, `budget` and `partySize` null when unstated rather than inventing them, and
+`Patagonia -> El Calafate` confirmed the gateway anchor works with a live model.
+
+Two climate-agent quality fixes came out of it. The tool fetched no wind, so for Patagonia — where
+December averages 31km/h peak winds gusting to 60 — the advice was silently missing the thing that
+actually defines the place; wind now comes from the same request at no extra cost. Then the caution
+field needed three prompt iterations: first a redundant restatement of the summary, then a bare
+fragment ("sustained winds"), then over-reporting 15km/h in Kyoto as a hazard. It is now
+threshold-based (>30C, <5C, >40% wet days, >30km/h wind) and picks whichever figure exceeds its
+threshold by the widest margin. Verified across three climates: Kyoto April stays correctly silent,
+Patagonia picks wind, Marrakesh July picks the 40.1C heat over its wind.
+
+### 2026-09-26 — Phase 0 (branch `v2`)
+Built the v2 skeleton: `schema/trip.ts` (TripBrief + flat JSON Schema), `tools/` (geocode, climate
+normals — no LLM, independently testable), `agents/` (intake, climate), `utils/structured.ts`
+wrapping Workers AI JSON Mode, and `POST /api/v2/brief`. Verified the tools against live APIs across
+seven destinations.
+
+Two bugs found by that testing, both fixed. Geocoders are city-oriented, so "Patagonia" resolved to
+Patagonia, Arizona and "Tuscany" to Tuscany, Canada — intake now also emits a `destinationCity`
+gateway anchor ("Patagonia" -> "El Calafate"), which matters because "Patagonia trek" is one of the
+app's own suggestion chips. And the first climate implementation fired one request per year, which
+got rate limited in bursts and silently reported "no data for this location"; it now takes a single
+multi-year request (3x fewer calls, all twelve months from one response, cacheable) and throws
+`ClimateFetchError` so a failed request is distinguishable from a location with no data.
 
 ### 2026-09-26 — v2 planning
 Researched and wrote `docs/PLAN-v2.md`: nine grounded agents (six parallel specialists plus intake,

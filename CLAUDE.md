@@ -28,7 +28,12 @@ Verified (run from the named directory):
 - `cd frontend && npm install` / `cd worker && npm install`
 - `cd frontend && npm run lint` — eslint, currently clean
 - `cd frontend && npm run build` — `tsc -b && vite build`, currently clean (~2s)
-- `cd worker && npx tsc --noEmit` — currently clean; this is the worker's only check
+- `cd frontend && npm test` — vitest, 16 tests over `itineraryEdits`
+- `cd worker && npm run typecheck` — tsc --noEmit, currently clean
+- `cd worker && npm test` — vitest, 57 tests over cluster, trip schema, aiJson, CORS, rate limiting
+
+Run tests before and after touching `tools/cluster.ts`, `schema/trip.ts` or
+`frontend/src/itineraryEdits.ts` — they are pure and the tests encode real regressions.
 
 Unverified (need a Cloudflare login / network; ask before running):
 - `cd worker && npx wrangler dev` — local worker on `http://localhost:8787`
@@ -37,7 +42,6 @@ Unverified (need a Cloudflare login / network; ask before running):
 - Frontend deploy: Cloudflare Pages (`frontend/.wrangler/` exists, so it was likely
   `wrangler pages deploy dist` — **assumption**, no config committed)
 
-There is no test runner and no test files in either package.
 
 ## Conventions
 - TypeScript everywhere, ESM, 2-space indent, double quotes, semicolons.
@@ -91,7 +95,8 @@ There is no test runner and no test files in either package.
 
 ## Workflow
 - Plan before non-trivial changes; say which of the two packages you are touching.
-- After editing `frontend/`: `npm run lint` and `npm run build`. After editing `worker/`: `npx tsc --noEmit`.
+- After editing `frontend/`: `npm run lint`, `npm test`, `npm run build`.
+  After editing `worker/`: `npm run typecheck` and `npm test`.
 - Changing the plan shape means touching all three of `prompts.ts`, `plan.ts`, `types.ts` together.
 - Update `docs/PROGRESS.md` (session log + status) at the end of each task.
 

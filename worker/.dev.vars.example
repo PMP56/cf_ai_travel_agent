@@ -1,4 +1,0 @@
-# Copy to worker/.dev.vars (gitignored) and fill in. Read by `wrangler dev` only.
-# The deployed worker gets this via: npx wrangler secret put UNSPLASH_ACCESS_KEY
-# Optional — without it /api/generate still works and returns no photos.
-UNSPLASH_ACCESS_KEY=

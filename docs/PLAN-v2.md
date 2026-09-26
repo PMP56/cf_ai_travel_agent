@@ -215,6 +215,52 @@ support against the live catalog at implementation time**; the docs lag the cata
 **Cost: $0 marginal**, within Workers AI free-tier limits. The constraint becomes free-tier
 neuron quota rather than dollars, which still argues for caching and rate limiting.
 
+### Hosting — staying on Cloudflare
+
+**Decided 2026-09-26.** Revisit only if the model-quality ceiling or the neuron budget becomes the
+thing blocking progress.
+
+Cloudflare is the only platform that bundles **free inference + durable per-user state + durable
+execution + WebSockets + static hosting** on a single free tier. Everywhere else means assembling
+three or four vendors and paying for inference from the first request. The nine-agent fan-out with
+per-user memory and resumable multi-step execution is also precisely what Durable Objects and
+Workflows are built for — this is a good fit, not a compromise.
+
+Considered and rejected: **Vercel** (better generative-UI tooling in the AI SDK, but no free
+inference, no DO equivalent, less mature durable execution), **Fly/Railway** (pay for uptime, build
+state and orchestration yourself), **AWS Lambda + Step Functions + Bedrock** (mature, but enormous
+complexity for a solo project and no free inference).
+
+#### The neuron budget — and why output tokens shape the design
+
+`llama-3.3-70b-instruct-fp8-fast` costs **26,668 neurons per 1M input tokens** and
+**204,805 per 1M output tokens**. The free tier is **10,000 neurons/day**; beyond that,
+Workers Paid is $5/month plus $0.011 per 1,000 neurons.
+
+Estimated for one nine-agent plan (~18,300 input, ~4,700 output tokens):
+
+| | tokens | neurons |
+|---|---|---|
+| input | ~18,300 | ~490 |
+| output | ~4,700 | ~960 |
+| **total** | | **~1,450** |
+
+- **Free tier: roughly 6-7 complete plans per day.** Enough to build against, not enough to demo
+  publicly — one curious visitor exhausts a day.
+- **Paid: about 1.6 cents per plan.** Budget the $5/month before the app is shared.
+- Workflows is on the free plan too (3,000 steps/day), so Phase 2 is not blocked.
+
+**Output tokens cost 7.7x input, so frugal output is an architectural constraint, not a
+micro-optimisation:** keep every schema tight, have the Composer emit structured data rather than
+prose, and have the Critic return a defect list rather than an essay.
+
+#### The hedge that matters
+
+The decision that keeps this reversible is not the host but the **single chokepoint for model
+calls**: `utils/structured.ts` is the only file that knows what a model is, and `tools/` is plain
+`fetch` with no platform dependency. Repointing that one file at Groq, Together or Claude later
+changes nothing else. Keep it that way — no agent should call `ai.run` directly.
+
 ---
 
 ## 6. Honest limitations
