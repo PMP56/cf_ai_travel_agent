@@ -3,6 +3,11 @@
 Living status file. Newest session log entry goes on top.
 
 ## Current focus
+**v2 direction agreed — see `docs/PLAN-v2.md`.** The project is becoming a grounded multi-agent
+travel workspace rather than a chat app. Decisions locked: all Workers AI (zero marginal cost),
+keyless data sources only, evolve the existing worker on a `v2` branch, MapLibre + OSM for maps.
+Next step is Phase 0: `TripBrief` schema, JSON Mode, and one grounded tool end to end.
+
 Hygiene pass complete. The Unsplash key has been rotated, the leaked value is dead, and the new one
 is set as a deployed Cloudflare secret. Cloudflare login is active, so `wrangler dev` can now serve
 `/api/generate` and changes can finally be verified end to end rather than by typecheck alone.
@@ -100,6 +105,15 @@ Assumptions made while writing these docs — correct any that are wrong.
 | 2026-03-18 | (from `4b4f976`) Single-activity replacement sends the whole itinerary to the model | Cheapest way to stop it suggesting an activity already in the plan |
 
 ## Session log
+
+### 2026-09-26 — v2 planning
+Researched and wrote `docs/PLAN-v2.md`: nine grounded agents (six parallel specialists plus intake,
+composer and critic), a workspace UI with a declarative block registry instead of a chat log, and a
+six-phase build. Two findings shaped it — Amadeus killed its free self-service tier in July 2026, so
+no free flight/hotel data; and the model already in use supports JSON Mode with a full `json_schema`,
+which removes most of the reason to move to Claude. Also concluded the fan-out design does not need
+LLM function calling at all, since each specialist has exactly one data source and the orchestrator
+can fetch in code. Decisions recorded in the plan's §8.
 
 ### 2026-09-26 — Code review and fixes
 Full review of `worker/src` and `frontend/src` before starting feature work. Fixed three real bugs:
