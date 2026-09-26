@@ -8,7 +8,8 @@ travel workspace rather than a chat app. Decisions locked: all Workers AI (zero 
 keyless data sources only, evolve the existing worker on a `v2` branch, MapLibre + OSM for maps.
 Phase 0 has landed the pattern: `schema/`, `tools/`, `agents/` split, JSON Mode via
 `utils/structured.ts`, two keyless tools (geocoding, climate normals) and two agents (intake,
-climate), behind `POST /api/v2/brief`. **UI reworked against real screenshots.** **Phase 5 hardening underway** — 73 tests, origin allowlist, per-IP rate limiting.
+climate), behind `POST /api/v2/brief`. **v2 is ready to release** — v1 code removed, README rewritten, all checks green.
+**UI reworked against real screenshots.** **Phase 5 hardening underway** — 73 tests, origin allowlist, per-IP rate limiting.
 **Phase 4 (direct manipulation) built.** **Phase 3 (UI) built** — the frontend is rewritten around
 the workspace model. **Phase 2 done**
 apart from Workflows, which is a deliberate decision rather than a task (see below). **Phase 1 complete.** Intake plus four grounded specialists — destination, climate, places, food —
@@ -136,6 +137,19 @@ Assumptions made while writing these docs — correct any that are wrong.
 | 2026-03-18 | (from `4b4f976`) Single-activity replacement sends the whole itinerary to the model | Cheapest way to stop it suggesting an activity already in the plan |
 
 ## Session log
+
+### 2026-09-26 — Removed v1; prepared v2 for release
+The frontend had stopped calling v1 entirely, so `/api/generate`, `/api/replace-highlight` and
+`/api/profile/:userId` were dead weight along with `workflow.ts`, `utils/prompts.ts`, `utils/plan.ts`
+and `utils/photos.ts`. All removed; the removed routes now 404 and the v2 stream is unaffected.
+
+Unsplash is gone with them — v2 takes every image from Wikipedia — so the worker needs no secrets at
+all. The rotated key can be deleted from the deployed worker.
+
+**Feature regression worth naming:** `UserMemory` was only ever read by the v1 routes, so v2 has no
+persistent memory. The Durable Object is still bound and exported, because deleting a DO class needs
+a migration, but nothing writes to it. v1 remembered a rolling list of preferences per user and v2
+does not. This is the first thing to fix after release.
 
 ### 2026-09-26 — Supporting panels turned into instruments
 The four panels below the itinerary were boxes of grey prose, so genuinely useful material — a

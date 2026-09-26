@@ -1,199 +1,117 @@
-# AI Travel Agent
+# Field Guide
 
-![AI Travel Agent](travel-agent.png)
+![Field Guide](travel-agent.png)
 
-Serverless AI travel planner built with Cloudflare Workers, Durable Objects, and Llama 3.3 70B.
-Generate personalized itineraries with persistent user memory.
+A travel planner where **nothing is invented**. Seven agents run over real sources — Wikipedia,
+Wikivoyage and the ECMWF ERA5 climate archive — and every place in the resulting itinerary carries
+its coordinates, its photograph and a link to where it came from.
 
-### Running site is available at:
-> https://travel-agent-111.pages.dev/
+Built on Cloudflare Workers with Workers AI. No API keys: every data source is keyless.
 
-## Features
+> Live at https://travel-agent-111.pages.dev/
 
-- 🤖 AI-powered day-by-day itineraries using Llama 3.3 70B
-- 🖼️ Destination photos from Unsplash
-- 🔁 Swap any single activity for an alternative, without regenerating the plan
-- 💾 User memory with Durable Objects
-- ⚡ Serverless on Cloudflare's edge network
+## Why it is not a chatbot
 
-## Quick Start
+A chat app answers, then forgets. Ask it for ten days instead of seven and it re-reads your sentence
+and produces a different trip.
 
-### Backend
+Here the request becomes a **brief** — a structured object that stays on screen. Change one field
+and only the affected agents re-run, so the plan converges instead of drifting. The itinerary is a
+document you rearrange directly, not a message you argue with.
+
+## The agents
+
+Six specialists fan out in parallel, wrapped by three sequential stages:
+
+| Agent | Grounded in | Job |
+| --- | --- | --- |
+| Intake | — | Free text to a typed `TripBrief` |
+| Destination | Wikivoyage | Overview, transport, safety, etiquette |
+| Climate | ERA5 archive | Five-year normals for every month |
+| Places | Wikipedia | Real POIs ranked by pageviews |
+| Food | Wikivoyage | Local dishes and how eating works |
+| Composer | geometry | Groups places by location, orders each day |
+| Critic | the plan | Rejects impossible days before you see them |
+
+Two rules make the output trustworthy:
+
+**Agents reason over fetched data, never recall.** Each specialist gets real text or real numbers
+and interprets them. The climate agent does not remember what April is like in Kyoto; it reads
+measured normals.
+
+**The model selects, it does not name.** The places agent picks by *index* from a list of real
+geocoded candidates, so every coordinate on the map came from a source. A hallucinated place is
+structurally impossible.
+
+## Architecture
+
+```
+frontend/  React 19 + Vite + Tailwind 4 + MapLibre
+    │  POST /api/v2/stream  (Server-Sent Events)
+    ▼
+worker/
+├── pipeline.ts     orchestration; emits progress per agent
+├── agents/         one per specialist: fetch → schema → reason
+├── tools/          keyless data sources; no LLM, unit-tested
+├── schema/         TripBrief and the JSON Schemas
+└── utils/          structured output, cache, CORS, rate limiting
+```
+
+`tools/` has no model dependency, which is what makes the grounding claim testable: those functions
+are exercised in CI without spending a single neuron.
+
+Deeper detail in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md); status and backlog in
+[docs/PROGRESS.md](docs/PROGRESS.md).
+
+## Running it
 
 ```bash
-cd worker
-npm install
+# backend — needs a Cloudflare login; Workers AI has no local emulation
+cd worker && npm install && npx wrangler login && npx wrangler dev
 
-# Log in to Cloudflare (required — Workers AI has no local emulation)
-npx wrangler login
-
-# Optional: enable photos locally by creating worker/.dev.vars with
-#   UNSPLASH_ACCESS_KEY=your_key_here
-# Without it the app works fine and simply returns no photos.
-
-npx wrangler dev        # http://localhost:8787
+# frontend
+cd frontend && npm install && cp .env.example .env && npm run dev
 ```
 
-### Frontend
-
-```bash
-cd frontend
-npm install
-
-# Point the app at your worker (defaults to http://localhost:8787)
-cp .env.example .env
-
-npm run dev             # http://localhost:5173
-```
-
-## API
-
-### `POST /api/generate`
-
-Generate a travel plan.
-
-```json
-{
-  "userId": "user123",
-  "message": "I want to visit Japan for 2 weeks in spring with a $3000 budget"
-}
-```
-
-Returns `{ plan, photos, message }`, where `plan` is:
-
-```json
-{
-  "destination": "Kyoto, Japan",
-  "destinationOverview": "2–3 sentence overview with duration, budget and best time to visit",
-  "highlights": [
-    { "title": "Fushimi Inari at sunrise", "date": "Day 1", "description": "1–2 sentences" }
-  ],
-  "optionalAddOns": "Paragraph of optional activities and tips"
-}
-```
-
-`date` is a label like `"Day 1"`, not a calendar date. Highlights on the same day share an
-identical `date` string — the UI groups on exact equality.
-
-### `POST /api/replace-highlight`
-
-Swap one activity for a different one. The full itinerary is sent so the model does not
-suggest something already in the plan.
-
-```json
-{
-  "destination": "Kyoto, Japan",
-  "day": "Day 1",
-  "currentTitle": "Fushimi Inari at sunrise",
-  "allHighlights": [{ "title": "...", "date": "Day 1" }]
-}
-```
-
-Returns `{ highlight }`.
-
-### `GET /api/profile/:userId`
-
-Returns `{ profile }` — the user's saved preferences from their Durable Object.
-
-### `GET /`
-
-Health check.
-
-## Configuration
-
-`worker/wrangler.toml`:
-
-```toml
-name = "ai-travel-concierge"
-main = "src/index.ts"
-compatibility_date = "2024-01-01"
-
-[ai]
-binding = "AI"
-
-[[durable_objects.bindings]]
-name = "USER_MEMORY"
-class_name = "UserMemory"
-script_name = "ai-travel-concierge"
-
-[[migrations]]
-tag = "v1"
-new_sqlite_classes = ["UserMemory"]
-
-[vars]
-ENVIRONMENT = "production"
-```
-
-The Unsplash key is a **secret**, not a var:
-
-```bash
-npx wrangler secret put UNSPLASH_ACCESS_KEY   # deployed
-echo "UNSPLASH_ACCESS_KEY=..." > worker/.dev.vars   # local, gitignored
-```
-
-## Project Structure
-
-```
-worker/src/
-├── index.ts            # Router: all four routes
-├── workflow.ts         # executeWorkflow + replaceHighlight
-├── memory/
-│   ├── UserMemory.ts   # Durable Object + load/save helpers
-│   └── schema.ts       # UserProfile types
-└── utils/
-    ├── plan.ts         # TravelPlan / Highlight types
-    ├── prompts.ts      # buildPlanPrompt
-    ├── photos.ts       # Unsplash search
-    └── helpers.ts      # CORS, JSON responses
-
-frontend/src/
-├── App.tsx             # All app state
-├── types.ts            # Mirrors worker/src/utils/plan.ts
-└── components/         # ChatWindow, MessageContent, PhotoGallery, …
-```
-
-## How It Works
-
-1. Client sends a travel request with a browser-generated `userId`.
-2. Worker loads that user's profile from their Durable Object.
-3. One AI call returns the full itinerary as raw JSON, which is validated field by field.
-4. Unsplash photo search and a second AI call (extracting a one-line preference) run in parallel.
-5. The extracted preference is appended to the profile; the last 10 are kept, the last 3 are fed
-   into the next prompt.
-6. Structured JSON goes back to the client.
-
-## Development
-
-### Local testing
-
-```bash
-curl -X POST http://localhost:8787/api/generate \
-  -H "Content-Type: application/json" \
-  -d '{"userId":"test-user","message":"Plan a week in Paris for $2000"}'
-```
+Or skip the backend entirely: **"see a finished plan"** on the home page renders a complete sample
+from real data, with no network call.
 
 ### Checks
 
 ```bash
-cd frontend && npm run lint      # eslint
-cd frontend && npm run build     # tsc -b && vite build
-cd worker   && npx tsc --noEmit  # the worker's only check
+cd worker   && npm run typecheck && npm test   # 63 tests
+cd frontend && npm run lint && npm test        # 16 tests
 ```
 
-There is no test suite yet.
+## The cost ceiling, stated plainly
 
-### Customization
+One plan is seven model calls, about **1,450 neurons**. The Workers AI free tier is 10,000 a day —
+roughly **seven plans**, and `wrangler dev` spends the same allowance as production. Past that the
+app says so and tells you when it resets.
 
-- **Add endpoints**: add a route handler in `worker/src/index.ts`.
-- **Change the plan shape**: update `worker/src/utils/prompts.ts`, `worker/src/utils/plan.ts` and
-  `frontend/src/types.ts` together — they are kept in sync by hand.
-- **Change memory**: update `worker/src/memory/schema.ts`.
+The Workers Paid plan ($5/month) removes the cap; a plan then costs about **1.6 cents**.
 
-## Tech Stack
+## API
 
-- Cloudflare Workers, Durable Objects, Workers AI (`@cf/meta/llama-3.3-70b-instruct-fp8-fast`)
-- React 19, Vite 7, Tailwind 4, framer-motion
-- TypeScript
+### `POST /api/v2/stream`
+
+Server-Sent Events. Takes either `{ "message": "a week in Kyoto in April" }` or an edited
+`{ "brief": TripBrief, "place": ResolvedPlace }`, which skips intake and re-plans against the same
+intent.
+
+Emits `agent:start`, `agent:done`, `agent:failed`, `brief`, then `complete` with the full result.
+
+### `POST /api/v2/brief`
+
+The same pipeline as one JSON response, for scripting.
+
+Both are rate limited to five plans per minute per IP.
+
+## Sources
+
+[Wikipedia](https://en.wikipedia.org) · [Wikivoyage](https://en.wikivoyage.org) ·
+[Open-Meteo](https://open-meteo.com) (ERA5) · [OpenStreetMap](https://www.openstreetmap.org) ·
+[MapLibre](https://maplibre.org)
 
 ## License
 

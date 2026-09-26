@@ -1,34 +1,21 @@
-import {
-  UserMemory,
-  getUserProfile,
-  updateUserProfile,
-} from "./memory/UserMemory";
-import { executeWorkflow, replaceHighlight } from "./workflow";
+import { UserMemory } from "./memory/UserMemory";
 import { corsHeaders, jsonResponse, errorResponse } from "./utils/helpers";
 import { checkRateLimit, clientKey, PLAN_LIMIT } from "./utils/rateLimit";
 import { runPipeline, PipelineEvent, PipelineInput } from "./pipeline";
 import { TripBrief } from "./schema/trip";
 import { ResolvedPlace } from "./tools/geocode";
 
+/**
+ * Still exported because wrangler.toml binds it and removing a Durable Object
+ * class requires a migration. Nothing reads it yet: v2's pipeline is stateless,
+ * so the per-user memory v1 had is currently a feature regression rather than a
+ * deliberate omission. See docs/PROGRESS.md.
+ */
 export { UserMemory };
 
 interface Env {
   AI: Ai;
   USER_MEMORY: DurableObjectNamespace;
-  UNSPLASH_ACCESS_KEY?: string;
-}
-
-interface GenerateRequestBody {
-  userId: string;
-  message: string;
-}
-
-interface ReplaceHighlightRequestBody {
-  userId: string;
-  destination: string;
-  day: string;
-  currentTitle: string;
-  allHighlights: { title: string; date: string }[];
 }
 
 export default {
@@ -53,8 +40,7 @@ export default {
     const isPlanRoute =
       request.method === "POST" &&
       (url.pathname === "/api/v2/brief" ||
-        url.pathname === "/api/v2/stream" ||
-        url.pathname === "/api/generate");
+        url.pathname === "/api/v2/stream");
 
     if (isPlanRoute) {
       const verdict = checkRateLimit(clientKey(request), PLAN_LIMIT);
@@ -72,85 +58,6 @@ export default {
             },
           }
         );
-      }
-    }
-
-    // POST /api/generate
-    if (url.pathname === "/api/generate" && request.method === "POST") {
-      try {
-        const body = (await request.json()) as Partial<GenerateRequestBody>;
-        const { userId, message } = body;
-
-        if (!userId || !message) {
-          return errorResponse("userId and message are required", 400, origin);
-        }
-
-        // Load this user's remembered preferences
-        const id = env.USER_MEMORY.idFromName(userId);
-        const stub = env.USER_MEMORY.get(id);
-        const userProfile = await getUserProfile(stub);
-
-        // Run simplified travel planner workflow
-        const { plan, photos, updatedProfile } = await executeWorkflow(
-          env.AI,
-          message,
-          userProfile,
-          env.UNSPLASH_ACCESS_KEY
-        );
-
-        await updateUserProfile(stub, updatedProfile);
-
-        return jsonResponse(
-          {
-            plan: plan,
-            photos,
-            message: "Travel plan generated successfully!",
-          },
-          200,
-          origin
-        );
-      } catch (err) {
-        console.error("Error:", err);
-        return errorResponse("Failed to generate a travel plan", 500, origin);
-      }
-    }
-
-    // POST /api/replace-highlight
-    if (url.pathname === "/api/replace-highlight" && request.method === "POST") {
-      try {
-        const body = (await request.json()) as Partial<ReplaceHighlightRequestBody>;
-        const { destination, day, currentTitle, allHighlights } = body;
-
-        if (!destination || !day || !currentTitle || !allHighlights) {
-          return errorResponse("destination, day, currentTitle and allHighlights are required", 400, origin);
-        }
-
-        const highlight = await replaceHighlight(env.AI, {
-          destination,
-          day,
-          currentTitle,
-          allHighlights,
-        });
-
-        return jsonResponse({ highlight }, 200, origin);
-      } catch (err) {
-        console.error("Error:", err);
-        return errorResponse("Failed to find a replacement activity", 500, origin);
-      }
-    }
-
-    // GET /api/profile/:userId
-    if (url.pathname.startsWith("/api/profile/") && request.method === "GET") {
-      try {
-        const userId = url.pathname.split("/").pop()!;
-        const id = env.USER_MEMORY.idFromName(userId);
-        const stub = env.USER_MEMORY.get(id);
-        const profile = await getUserProfile(stub);
-
-        return jsonResponse({ profile }, 200, origin);
-      } catch (err) {
-        console.error("Error:", err);
-        return errorResponse("Failed to load profile", 500, origin);
       }
     }
 

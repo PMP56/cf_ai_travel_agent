@@ -17,7 +17,6 @@ new_sqlite_classes = ["UserMemory"]
 [vars]
 ENVIRONMENT = "production"
 
-# UNSPLASH_ACCESS_KEY is a secret, not a var.
-#   deployed: npx wrangler secret put UNSPLASH_ACCESS_KEY
-#   local:    put it in worker/.dev.vars (gitignored)
-# Without it, /api/generate still works and simply returns no photos.
+# No secrets are required. v2 draws every image from Wikipedia and every source
+# is keyless, so UNSPLASH_ACCESS_KEY is no longer read — the deployed secret can
+# be deleted with: npx wrangler secret delete UNSPLASH_ACCESS_KEY
