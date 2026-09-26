@@ -8,7 +8,8 @@ travel workspace rather than a chat app. Decisions locked: all Workers AI (zero 
 keyless data sources only, evolve the existing worker on a `v2` branch, MapLibre + OSM for maps.
 Phase 0 has landed the pattern: `schema/`, `tools/`, `agents/` split, JSON Mode via
 `utils/structured.ts`, two keyless tools (geocoding, climate normals) and two agents (intake,
-climate), behind `POST /api/v2/brief`. **Phase 4 (direct manipulation) built.** **Phase 3 (UI) built** — the frontend is rewritten around
+climate), behind `POST /api/v2/brief`. **Phase 5 hardening underway** — 73 tests, origin allowlist, per-IP rate limiting.
+**Phase 4 (direct manipulation) built.** **Phase 3 (UI) built** — the frontend is rewritten around
 the workspace model. **Phase 2 done**
 apart from Workflows, which is a deliberate decision rather than a task (see below). **Phase 1 complete.** Intake plus four grounded specialists — destination, climate, places, food —
 all verified against a real model and fanning out in parallel. Places produces correct shortlists for Kyoto, Florence
@@ -135,6 +136,29 @@ Assumptions made while writing these docs — correct any that are wrong.
 | 2026-03-18 | (from `4b4f976`) Single-activity replacement sends the whole itinerary to the model | Cheapest way to stop it suggesting an activity already in the plan |
 
 ## Session log
+
+### 2026-09-26 — Phase 5: tests and hardening
+Added the test suite this project has never had: 57 in the worker (clustering, trip normalisation,
+`parseAiJson`, CORS, rate limiting) and 16 in the frontend (itinerary edits), running in ~150ms
+each. The cases deliberately encode bugs that actually happened rather than hypothetical ones —
+the 3/3/3/1/1 clustering imbalance, sentinel-to-null normalisation, fence-stripped model output,
+and origin lookalikes.
+
+Replaced origin reflection with an allowlist. The old `corsHeaders` echoed whatever `Origin`
+arrived, so any site could call the worker from a visitor's browser and burn the Workers AI quota;
+`travel-agent-111.pages.dev.evil.com` now fails, where before it passed.
+
+Added per-IP rate limiting at 5 plans/minute on the expensive routes. A plan is seven model calls
+at ~1,450 neurons, against a 10,000/day free tier — roughly seven plans is the entire daily budget,
+so one script could exhaust it. Deliberately isolate-local: each edge location enforces its own
+budget and a cold isolate starts fresh, which makes it a brake on casual abuse rather than a
+security control. A real limit needs a Durable Object or Cloudflare's rate-limiting binding.
+
+Two notes. The limiter counts requests that fail validation, so probing with malformed bodies still
+costs budget — deliberate, but it means a user fat-fingering a request burns an allowance.
+And verification nearly went wrong: the first clean-worker run failed to bind because a stale
+`workerd` still held port 8787, so the checks had been served by an instance whose provenance was
+unclear. Freed the port and re-ran against a confirmed-fresh instance before believing the results.
 
 ### 2026-09-26 — Phase 4: direct manipulation
 The pipeline now accepts either a message or an **edited brief**. Supplying a brief skips intake

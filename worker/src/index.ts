@@ -5,6 +5,7 @@ import {
 } from "./memory/UserMemory";
 import { executeWorkflow, replaceHighlight } from "./workflow";
 import { corsHeaders, jsonResponse, errorResponse } from "./utils/helpers";
+import { checkRateLimit, clientKey, PLAN_LIMIT } from "./utils/rateLimit";
 import { runPipeline, PipelineEvent, PipelineInput } from "./pipeline";
 import { TripBrief } from "./schema/trip";
 import { ResolvedPlace } from "./tools/geocode";
@@ -46,6 +47,32 @@ export default {
         status: 200,
         headers: corsHeaders(origin),
       });
+    }
+
+    // Planning is seven model calls, so both plan routes share one budget.
+    const isPlanRoute =
+      request.method === "POST" &&
+      (url.pathname === "/api/v2/brief" ||
+        url.pathname === "/api/v2/stream" ||
+        url.pathname === "/api/generate");
+
+    if (isPlanRoute) {
+      const verdict = checkRateLimit(clientKey(request), PLAN_LIMIT);
+      if (!verdict.allowed) {
+        return new Response(
+          JSON.stringify({
+            error: `Too many plans. Try again in ${verdict.retryAfterSeconds}s.`,
+          }),
+          {
+            status: 429,
+            headers: {
+              "Content-Type": "application/json",
+              "Retry-After": String(verdict.retryAfterSeconds),
+              ...corsHeaders(origin),
+            },
+          }
+        );
+      }
     }
 
     // POST /api/generate
