@@ -14,6 +14,8 @@
  * No LLM involved: plain fetch + arithmetic, unit-testable without a model.
  */
 
+import { cached, TTL } from "../utils/cache";
+
 const ARCHIVE_URL = "https://archive-api.open-meteo.com/v1/archive";
 const TIMEOUT_MS = 10000;
 const YEARS_SAMPLED = 5;
@@ -74,6 +76,17 @@ export async function getClimateYear(
   latitude: number,
   longitude: number,
   timezone = "UTC"
+): Promise<ClimateYear> {
+  // One fetch already yields all twelve months, so this is purely about not
+  // repeating a five-year archive pull for a destination seen recently.
+  const key = `climate:${latitude.toFixed(3)}:${longitude.toFixed(3)}`;
+  return cached(key, TTL.climate, () => fetchClimateYear(latitude, longitude, timezone));
+}
+
+async function fetchClimateYear(
+  latitude: number,
+  longitude: number,
+  timezone: string
 ): Promise<ClimateYear> {
   // ERA5 lags real time, so never sample the current year.
   const lastCompleteYear = new Date().getUTCFullYear() - 1;

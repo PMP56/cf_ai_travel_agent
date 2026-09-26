@@ -10,6 +10,8 @@
  * No LLM involved.
  */
 
+import { cached, TTL } from "../utils/cache";
+
 const WIKIVOYAGE_API = "https://en.wikivoyage.org/w/api.php";
 const USER_AGENT = "ai-travel-agent/0.2 (https://travel-agent-111.pages.dev/)";
 const TIMEOUT_MS = 10000;
@@ -113,7 +115,20 @@ export interface GuideOptions {
  */
 export async function getDestinationGuide(
   name: string,
-  { maxSectionChars = 1200 }: GuideOptions = {}
+  options: GuideOptions = {}
+): Promise<DestinationGuide | null> {
+  // Destination and food agents request the same guide concurrently; the cache
+  // collapses that into one upstream call. Keyed on length too, since food asks
+  // for longer sections than destination does.
+  const { maxSectionChars = 1200 } = options;
+  return cached(`guide:${name.toLowerCase()}:${maxSectionChars}`, TTL.guide, () =>
+    fetchDestinationGuide(name, maxSectionChars)
+  );
+}
+
+async function fetchDestinationGuide(
+  name: string,
+  maxSectionChars: number
 ): Promise<DestinationGuide | null> {
   const title = await resolveTitle(name);
   if (!title) return null;

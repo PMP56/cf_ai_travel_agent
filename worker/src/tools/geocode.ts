@@ -5,6 +5,8 @@
  * No LLM involved: this is a plain fetch so it can be tested without a model.
  */
 
+import { cached, TTL } from "../utils/cache";
+
 const GEOCODE_URL = "https://geocoding-api.open-meteo.com/v1/search";
 const TIMEOUT_MS = 5000;
 
@@ -62,6 +64,12 @@ export async function geocodeDestination(
   query: string,
   count = 5
 ): Promise<ResolvedPlace[]> {
+  return cached(`geocode:${query.toLowerCase()}:${count}`, TTL.geocode, () =>
+    fetchGeocode(query, count)
+  );
+}
+
+async function fetchGeocode(query: string, count: number): Promise<ResolvedPlace[]> {
   const url =
     `${GEOCODE_URL}?name=${encodeURIComponent(query)}` +
     `&count=${count}&language=en&format=json`;

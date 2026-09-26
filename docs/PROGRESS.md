@@ -8,10 +8,19 @@ travel workspace rather than a chat app. Decisions locked: all Workers AI (zero 
 keyless data sources only, evolve the existing worker on a `v2` branch, MapLibre + OSM for maps.
 Phase 0 has landed the pattern: `schema/`, `tools/`, `agents/` split, JSON Mode via
 `utils/structured.ts`, two keyless tools (geocoding, climate normals) and two agents (intake,
-climate), behind `POST /api/v2/brief`. **Phase 2 composer + critic landed** (Workflows/WebSockets still to come). **Phase 1 complete.** Intake plus four grounded specialists — destination, climate, places, food —
+climate), behind `POST /api/v2/brief`. **Phase 2 nearly done** — composer, critic, progress streaming and caching all landed. Only
+Workflows remains, and it is now a deliberate decision rather than a task (see below). **Phase 1 complete.** Intake plus four grounded specialists — destination, climate, places, food —
 all verified against a real model and fanning out in parallel. Places produces correct shortlists for Kyoto, Florence
-and Marrakesh with real coordinates throughout. The composer and critic now work end to end. Remaining for Phase 2: move the pipeline onto
-Cloudflare Workflows for durable execution, and stream progress over WebSockets.
+and Marrakesh with real coordinates throughout. The pipeline is extracted into `pipeline.ts` and streams progress over SSE at
+`POST /api/v2/stream`, which is the feed Phase 3's activity strip needs. A Kyoto run: intake 3.0s,
+four specialists in parallel 3.1-8.0s, composer 8.7s, critic 0.5s, 20.2s total.
+
+**Workflows is blocked on two upgrades and is not urgent.** It needs a current wrangler (project is
+on v3.114, v4 is current) and a recent `compatibility_date` (project is on 2024-01-01). Both are
+existing backlog items, both touch the deployed worker, and both deserve their own verified change
+rather than being smuggled in. Workflows earns its keep when losing a run is expensive; at 20
+seconds and effectively zero cost, it is not yet. Recommend doing the upgrades deliberately, then
+Workflows, rather than blocking Phase 3 on it.
 
 The region-anchor problem is now **visible rather than silent** — a Patagonia trip returns one
 scheduled day and the critic reports "13 of 14 days have nothing scheduled". That is the right
@@ -125,6 +134,23 @@ Assumptions made while writing these docs — correct any that are wrong.
 | 2026-03-18 | (from `4b4f976`) Single-activity replacement sends the whole itinerary to the model | Cheapest way to stop it suggesting an activity already in the plan |
 
 ## Session log
+
+### 2026-09-26 — Progress streaming and caching
+Extracted the pipeline out of the route handler into `pipeline.ts` so one implementation serves both
+the JSON endpoint and a new SSE endpoint at `POST /api/v2/stream`. SSE rather than WebSockets:
+progress is strictly one-way, so a socket would add a Durable Object and a connection lifecycle for
+nothing, and EventSource reconnects by itself. Every stage reports start, duration and a one-line
+summary — a full plan takes 20-60s, far too long for a spinner. The stream makes the parallelism
+visible: all four specialists start at the same instant.
+
+Added an isolate-local TTL cache over all four tools. The concrete problem was duplication inside a
+single request — destination and food each fetched the same Wikivoyage guide — and concurrent
+callers now share one in-flight promise. Failures are deliberately never cached, since caching a
+rate-limited miss would turn a transient fault into a sticky one.
+
+Honest measurement: end-to-end agent timings barely moved, because they are dominated by model
+latency rather than fetches. The cache's value is fewer upstream calls against keyless rate-limited
+APIs — which has been the root cause of several silent-data-loss bugs here — not speed.
 
 ### 2026-09-26 — Phase 2: composer and critic
 Which places share a day is geometry, not judgement, so `tools/cluster.ts` decides it in code —

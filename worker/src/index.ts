@@ -5,14 +5,7 @@ import {
 } from "./memory/UserMemory";
 import { executeWorkflow, replaceHighlight } from "./workflow";
 import { corsHeaders, jsonResponse, errorResponse } from "./utils/helpers";
-import { runIntake } from "./agents/intake";
-import { runClimateAgent } from "./agents/climate";
-import { runPlacesAgent } from "./agents/places";
-import { runDestinationAgent } from "./agents/destination";
-import { runFoodAgent } from "./agents/food";
-import { runComposer } from "./agents/compose";
-import { runCritic } from "./agents/critic";
-import { missingBriefFields } from "./schema/trip";
+import { runPipeline, PipelineEvent } from "./pipeline";
 
 export { UserMemory };
 
@@ -132,7 +125,7 @@ export default {
       }
     }
 
-    // POST /api/v2/brief — v2 pipeline (Phase 0: intake + climate)
+    // POST /api/v2/brief — the full pipeline, one JSON response
     if (url.pathname === "/api/v2/brief" && request.method === "POST") {
       try {
         const body = (await request.json()) as { message?: string };
@@ -142,72 +135,69 @@ export default {
           return errorResponse("message is required", 400, origin);
         }
 
-        const { brief, place, alternatives } = await runIntake(env.AI, message);
-
-        // Specialists are independent and grounded — fan them out. Each
-        // catches its own failure: no specialist may take down the brief.
-        const [climate, places, destination, food] = await Promise.all([
-          place
-            ? runClimateAgent(env.AI, brief, place).catch((err) => {
-                console.error("Climate agent failed:", err);
-                return null;
-              })
-            : Promise.resolve(null),
-          place
-            ? runPlacesAgent(env.AI, brief, place).catch((err) => {
-                console.error("Places agent failed:", err);
-                return [];
-              })
-            : Promise.resolve([]),
-          // Destination and food need no geocode — they work from the name alone.
-          runDestinationAgent(env.AI, brief).catch((err) => {
-            console.error("Destination agent failed:", err);
-            return null;
-          }),
-          runFoodAgent(env.AI, brief).catch((err) => {
-            console.error("Food agent failed:", err);
-            return null;
-          }),
-        ]);
-
-        // Composition is sequential by nature: it needs the specialists' output.
-        // A failure here still returns everything they produced.
-        const itinerary =
-          place && places.length > 0
-            ? await runComposer(env.AI, brief, place, places, climate).catch((err) => {
-                console.error("Composer failed:", err);
-                return null;
-              })
-            : null;
-
-        const critique =
-          itinerary
-            ? await runCritic(env.AI, brief, itinerary, climate).catch((err) => {
-                console.error("Critic failed:", err);
-                return null;
-              })
-            : null;
-
-        return jsonResponse(
-          {
-            brief,
-            place,
-            alternatives,
-            destination,
-            climate,
-            places,
-            food,
-            itinerary,
-            critique,
-            missing: missingBriefFields(brief),
-          },
-          200,
-          origin
-        );
+        const result = await runPipeline(env.AI, message);
+        return jsonResponse(result, 200, origin);
       } catch (err) {
         console.error("Error:", err);
         return errorResponse("Failed to build trip brief", 500, origin);
       }
+    }
+
+    // POST /api/v2/stream — same pipeline, progress as Server-Sent Events.
+    //
+    // SSE rather than WebSockets: progress is strictly one-way, so a socket
+    // would add a Durable Object and a connection lifecycle for nothing. This
+    // is a plain streamed response, and EventSource reconnects on its own.
+    if (url.pathname === "/api/v2/stream" && request.method === "POST") {
+      let message: string | undefined;
+      try {
+        const body = (await request.json()) as { message?: string };
+        message = body?.message;
+      } catch {
+        return errorResponse("invalid JSON body", 400, origin);
+      }
+
+      if (!message || typeof message !== "string" || !message.trim()) {
+        return errorResponse("message is required", 400, origin);
+      }
+
+      const encoder = new TextEncoder();
+      const { readable, writable } = new TransformStream();
+      const writer = writable.getWriter();
+      const prompt = message;
+
+      const send = (event: PipelineEvent) => {
+        // Fire-and-forget: a client that has hung up must not break the run.
+        writer
+          .write(encoder.encode(`data: ${JSON.stringify(event)}\n\n`))
+          .catch(() => {});
+      };
+
+      // Run detached so the response streams immediately.
+      (async () => {
+        try {
+          const result = await runPipeline(env.AI, prompt, send);
+          send({ type: "complete", result });
+        } catch (err) {
+          console.error("Pipeline error:", err);
+          send({
+            type: "error",
+            message: err instanceof Error ? err.message : "Pipeline failed",
+          });
+        } finally {
+          await writer.close().catch(() => {});
+        }
+      })();
+
+      return new Response(readable, {
+        status: 200,
+        headers: {
+          "Content-Type": "text/event-stream",
+          "Cache-Control": "no-cache",
+          Connection: "keep-alive",
+          ...corsHeaders(origin),
+        },
+      });
     }
 
     return errorResponse("Not found", 404, origin);

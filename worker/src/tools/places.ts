@@ -18,6 +18,8 @@
  * No LLM involved.
  */
 
+import { cached, TTL } from "../utils/cache";
+
 const WIKI_API = "https://en.wikipedia.org/w/api.php";
 const USER_AGENT = "ai-travel-agent/0.2 (https://travel-agent-111.pages.dev/)";
 const TIMEOUT_MS = 10000;
@@ -353,12 +355,22 @@ export interface FindPlacesOptions {
 export async function findNotablePlaces(
   latitude: number,
   longitude: number,
-  {
-    radiusM = 15000,
-    limit = 20,
-    minViewsPerDay = 20,
-    destinationName = "",
-  }: FindPlacesOptions = {}
+  options: FindPlacesOptions = {}
+): Promise<NotablePlace[]> {
+  const { radiusM = 15000, limit = 20, minViewsPerDay = 20, destinationName = "" } = options;
+  const key = `places:${latitude.toFixed(3)}:${longitude.toFixed(3)}:${radiusM}:${limit}:${minViewsPerDay}`;
+  return cached(key, TTL.places, () =>
+    fetchNotablePlaces(latitude, longitude, radiusM, limit, minViewsPerDay, destinationName)
+  );
+}
+
+async function fetchNotablePlaces(
+  latitude: number,
+  longitude: number,
+  radiusM: number,
+  limit: number,
+  minViewsPerDay: number,
+  destinationName: string
 ): Promise<NotablePlace[]> {
   // 500 is the API maximum and it matters: geosearch returns NEAREST-first, so
   // a 100-candidate cap never escapes a dense city centre. At 100, Kyoto
