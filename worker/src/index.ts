@@ -10,6 +10,8 @@ import { runClimateAgent } from "./agents/climate";
 import { runPlacesAgent } from "./agents/places";
 import { runDestinationAgent } from "./agents/destination";
 import { runFoodAgent } from "./agents/food";
+import { runComposer } from "./agents/compose";
+import { runCritic } from "./agents/critic";
 import { missingBriefFields } from "./schema/trip";
 
 export { UserMemory };
@@ -168,6 +170,24 @@ export default {
           }),
         ]);
 
+        // Composition is sequential by nature: it needs the specialists' output.
+        // A failure here still returns everything they produced.
+        const itinerary =
+          place && places.length > 0
+            ? await runComposer(env.AI, brief, place, places, climate).catch((err) => {
+                console.error("Composer failed:", err);
+                return null;
+              })
+            : null;
+
+        const critique =
+          itinerary
+            ? await runCritic(env.AI, brief, itinerary, climate).catch((err) => {
+                console.error("Critic failed:", err);
+                return null;
+              })
+            : null;
+
         return jsonResponse(
           {
             brief,
@@ -177,6 +197,8 @@ export default {
             climate,
             places,
             food,
+            itinerary,
+            critique,
             missing: missingBriefFields(brief),
           },
           200,

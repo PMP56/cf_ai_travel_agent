@@ -8,12 +8,14 @@ travel workspace rather than a chat app. Decisions locked: all Workers AI (zero 
 keyless data sources only, evolve the existing worker on a `v2` branch, MapLibre + OSM for maps.
 Phase 0 has landed the pattern: `schema/`, `tools/`, `agents/` split, JSON Mode via
 `utils/structured.ts`, two keyless tools (geocoding, climate normals) and two agents (intake,
-climate), behind `POST /api/v2/brief`. **Phase 1 complete.** Intake plus four grounded specialists — destination, climate, places, food —
+climate), behind `POST /api/v2/brief`. **Phase 2 composer + critic landed** (Workflows/WebSockets still to come). **Phase 1 complete.** Intake plus four grounded specialists — destination, climate, places, food —
 all verified against a real model and fanning out in parallel. Places produces correct shortlists for Kyoto, Florence
-and Marrakesh with real coordinates throughout. Next: Phase 2 — the composer (assemble days, cluster
-geographically) and the critic (reject impossible travel times, over-packed days, budget overrun).
-The region-anchor problem below is best tackled alongside the composer, since that is what reveals
-whether a sparse place list actually matters.
+and Marrakesh with real coordinates throughout. The composer and critic now work end to end. Remaining for Phase 2: move the pipeline onto
+Cloudflare Workflows for durable execution, and stream progress over WebSockets.
+
+The region-anchor problem is now **visible rather than silent** — a Patagonia trip returns one
+scheduled day and the critic reports "13 of 14 days have nothing scheduled". That is the right
+behaviour, but the underlying gap still needs the Wikivoyage-region-links fix.
 
 **Efficiency note for Phase 2:** the destination and food agents each fetch the same Wikivoyage
 guide independently, so a single brief makes 2-4 redundant calls. Caching guides in a Durable Object
@@ -123,6 +125,28 @@ Assumptions made while writing these docs — correct any that are wrong.
 | 2026-03-18 | (from `4b4f976`) Single-activity replacement sends the whole itinerary to the model | Cheapest way to stop it suggesting an activity already in the plan |
 
 ## Session log
+
+### 2026-09-26 — Phase 2: composer and critic
+Which places share a day is geometry, not judgement, so `tools/cluster.ts` decides it in code —
+deterministic, free, and the first piece here testable with no network and no model. Greedy
+seeding from the most remote unassigned place, then nearest neighbours; measured at 27% less
+travel than rank order on Kyoto (38.3km vs 52.7km). The composer supplies only the day theme,
+within-day order and a practical note, and its day assignments are **not trusted**: if it moves a
+place between days the clustering stands and only its prose is kept.
+
+First run revealed the slot formula front-loaded — Kyoto came out 3/3/3/1/1 because it reserved
+only one place per remaining day rather than a fair share. Now re-divides what is left across the
+days still to fill; verified balanced across eight shapes including more days than places.
+
+The critic splits the same way: arithmetic faults (distance, density, duplicates, empty days) are
+computed, because a model asked to check them will sometimes agree that 40km is a pleasant stroll;
+the model judges only what arithmetic cannot — non-places, nonsensical ordering, notes that
+contradict the weather. Its prompt states that an empty list is a valid and common answer, and on
+a good Kyoto itinerary it correctly returns zero defects rather than inventing one.
+
+Also worth recording: wiring the composer in silently did nothing, because a `str.replace()`
+pattern did not match and I had omitted the assert used elsewhere. Same failure shape this project
+keeps producing — a no-op presenting as success. Every scripted edit now asserts its match.
 
 ### 2026-09-26 — Food specialist; Phase 1 complete
 Added the food agent over the Wikivoyage Eat/Drink sections. It deliberately does not name
