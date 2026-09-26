@@ -104,6 +104,8 @@ Assumptions made while writing these docs — correct any that are wrong.
 | 2026-09-26 | `UNSPLASH_SECRET_KEY` deliberately not deployed anywhere | Only used for Unsplash OAuth user-auth; this app does public search with `Client-ID` alone |
 | 2026-09-26 | Photos degrade to `[]` when the key is absent rather than erroring | Keeps local dev usable without a key; the guard already existed, the types now match it |
 | 2026-09-26 | Hardening (CORS, rate limits, real identity) kept in the backlog but ranked below correctness | Demo today, real users later — deferred, explicitly not dropped |
+| 2026-09-26 | Host stays Cloudflare; $5/mo Workers Paid budgeted before any public demo | Only platform bundling free inference + DO + Workflows + WS + hosting on one free tier; free tier is only ~6-7 plans/day (see PLAN-v2 §5) |
+| 2026-09-26 | `utils/structured.ts` is the only file allowed to call the model | Keeps the provider swappable; it is the hedge against the Workers AI quality ceiling, and costs nothing to maintain now |
 | 2026-09-26 | Prashanna is the sole committer; no attribution trailers, and Claude never runs `git commit` | His instruction, marked very important; enforced by a deny rule in `.claude/settings.json` |
 | 2026-03-18 | (from `5ceade4`) Photos and preference extraction run under `Promise.all` | Independent calls; cuts a round trip off `/api/generate` |
 | 2026-03-18 | (from `4b4f976`) Single-activity replacement sends the whole itinerary to the model | Cheapest way to stop it suggesting an activity already in the plan |
