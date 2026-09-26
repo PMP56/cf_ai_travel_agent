@@ -5,6 +5,9 @@ import {
 } from "./memory/UserMemory";
 import { executeWorkflow, replaceHighlight } from "./workflow";
 import { corsHeaders, jsonResponse, errorResponse } from "./utils/helpers";
+import { runIntake } from "./agents/intake";
+import { runClimateAgent } from "./agents/climate";
+import { missingBriefFields } from "./schema/trip";
 
 export { UserMemory };
 
@@ -121,6 +124,38 @@ export default {
       } catch (err) {
         console.error("Error:", err);
         return errorResponse("Failed to load profile", 500, origin);
+      }
+    }
+
+    // POST /api/v2/brief — v2 pipeline (Phase 0: intake + climate)
+    if (url.pathname === "/api/v2/brief" && request.method === "POST") {
+      try {
+        const body = (await request.json()) as { message?: string };
+        const message = body?.message;
+
+        if (!message || typeof message !== "string" || !message.trim()) {
+          return errorResponse("message is required", 400, origin);
+        }
+
+        const { brief, place, alternatives } = await runIntake(env.AI, message);
+
+        // Climate is a grounded specialist: it needs a resolved place and a month.
+        const climate = place ? await runClimateAgent(env.AI, brief, place) : null;
+
+        return jsonResponse(
+          {
+            brief,
+            place,
+            alternatives,
+            climate,
+            missing: missingBriefFields(brief),
+          },
+          200,
+          origin
+        );
+      } catch (err) {
+        console.error("Error:", err);
+        return errorResponse("Failed to build trip brief", 500, origin);
       }
     }
 

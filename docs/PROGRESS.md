@@ -3,10 +3,14 @@
 Living status file. Newest session log entry goes on top.
 
 ## Current focus
-**v2 direction agreed — see `docs/PLAN-v2.md`.** The project is becoming a grounded multi-agent
+**Phase 0 in progress on branch `v2` — see `docs/PLAN-v2.md`.** The project is becoming a grounded multi-agent
 travel workspace rather than a chat app. Decisions locked: all Workers AI (zero marginal cost),
 keyless data sources only, evolve the existing worker on a `v2` branch, MapLibre + OSM for maps.
-Next step is Phase 0: `TripBrief` schema, JSON Mode, and one grounded tool end to end.
+Phase 0 has landed the pattern: `schema/`, `tools/`, `agents/` split, JSON Mode via
+`utils/structured.ts`, two keyless tools (geocoding, climate normals) and two agents (intake,
+climate), behind `POST /api/v2/brief`. The tools are verified against the live APIs; **the two
+agents have not yet run against a real model** — that needs `wrangler dev`. Next: verify the agent
+path end to end, then Phase 1 (destination, places, food specialists).
 
 Hygiene pass complete. The Unsplash key has been rotated, the leaked value is dead, and the new one
 is set as a deployed Cloudflare secret. Cloudflare login is active, so `wrangler dev` can now serve
@@ -105,6 +109,20 @@ Assumptions made while writing these docs — correct any that are wrong.
 | 2026-03-18 | (from `4b4f976`) Single-activity replacement sends the whole itinerary to the model | Cheapest way to stop it suggesting an activity already in the plan |
 
 ## Session log
+
+### 2026-09-26 — Phase 0 (branch `v2`)
+Built the v2 skeleton: `schema/trip.ts` (TripBrief + flat JSON Schema), `tools/` (geocode, climate
+normals — no LLM, independently testable), `agents/` (intake, climate), `utils/structured.ts`
+wrapping Workers AI JSON Mode, and `POST /api/v2/brief`. Verified the tools against live APIs across
+seven destinations.
+
+Two bugs found by that testing, both fixed. Geocoders are city-oriented, so "Patagonia" resolved to
+Patagonia, Arizona and "Tuscany" to Tuscany, Canada — intake now also emits a `destinationCity`
+gateway anchor ("Patagonia" -> "El Calafate"), which matters because "Patagonia trek" is one of the
+app's own suggestion chips. And the first climate implementation fired one request per year, which
+got rate limited in bursts and silently reported "no data for this location"; it now takes a single
+multi-year request (3x fewer calls, all twelve months from one response, cacheable) and throws
+`ClimateFetchError` so a failed request is distinguishable from a location with no data.
 
 ### 2026-09-26 — v2 planning
 Researched and wrote `docs/PLAN-v2.md`: nine grounded agents (six parallel specialists plus intake,
