@@ -1,4 +1,10 @@
 import type { ResolvedPlace, TripBrief } from "../types";
+import EditableFact from "./EditableFact";
+
+const MONTHS = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
 
 /**
  * The trip brief as a row of facts.
@@ -17,6 +23,10 @@ interface BriefBarProps {
   place: ResolvedPlace | null;
   alternatives: ResolvedPlace[];
   missing: string[];
+  /** Committing an edit re-plans against the same structured intent. */
+  onEdit: (brief: TripBrief) => void;
+  /** True while a plan is running; edits are disabled to avoid racing it. */
+  busy: boolean;
 }
 
 const LABELS: Record<string, string> = {
@@ -25,30 +35,14 @@ const LABELS: Record<string, string> = {
   budget: "budget",
 };
 
-function Fact({
-  label,
-  value,
-  muted = false,
-}: {
-  label: string;
-  value: string;
-  muted?: boolean;
-}) {
-  return (
-    <div className="flex flex-col gap-0.5 min-w-0">
-      <span className="eyebrow">{label}</span>
-      <span
-        className={`text-[13px] leading-tight truncate ${
-          muted ? "text-ink-faint italic" : "text-ink"
-        }`}
-      >
-        {value}
-      </span>
-    </div>
-  );
-}
-
-export default function BriefBar({ brief, place, alternatives, missing }: BriefBarProps) {
+export default function BriefBar({
+  brief,
+  place,
+  alternatives,
+  missing,
+  onEdit,
+  busy,
+}: BriefBarProps) {
   const unset = "not specified";
 
   return (
@@ -77,28 +71,70 @@ export default function BriefBar({ brief, place, alternatives, missing }: BriefB
         )}
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-3 px-4 py-3">
-        <Fact
+      <div
+        className={`grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-3 px-4 py-3 ${
+          busy ? "opacity-50 pointer-events-none" : ""
+        }`}
+      >
+        <EditableFact
           label="duration"
-          value={brief.durationDays ? `${brief.durationDays} days` : unset}
-          muted={!brief.durationDays}
+          value={brief.durationDays ? `${brief.durationDays} days` : null}
+          editValue={brief.durationDays ? String(brief.durationDays) : ""}
+          placeholder={unset}
+          inputMode="numeric"
+          onCommit={(raw) => {
+            const n = parseInt(raw, 10);
+            onEdit({ ...brief, durationDays: Number.isFinite(n) && n > 0 ? Math.min(n, 60) : null });
+          }}
         />
-        <Fact label="month" value={brief.travelMonth ?? unset} muted={!brief.travelMonth} />
-        <Fact
+        <EditableFact
+          label="month"
+          value={brief.travelMonth}
+          placeholder={unset}
+          options={MONTHS}
+          onCommit={(raw) => {
+            const match = MONTHS.find((m) => m.toLowerCase() === raw.toLowerCase());
+            onEdit({ ...brief, travelMonth: match ?? null });
+          }}
+        />
+        <EditableFact
           label="budget"
           value={
             brief.budget
               ? `${brief.budget.amount.toLocaleString()} ${brief.budget.currency}`
-              : unset
+              : null
           }
-          muted={!brief.budget}
+          editValue={brief.budget ? String(brief.budget.amount) : ""}
+          placeholder={unset}
+          inputMode="numeric"
+          onCommit={(raw) => {
+            const n = parseInt(raw.replace(/[^0-9]/g, ""), 10);
+            onEdit({
+              ...brief,
+              budget:
+                Number.isFinite(n) && n > 0
+                  ? { amount: n, currency: brief.budget?.currency ?? "USD" }
+                  : null,
+            });
+          }}
         />
-        <Fact
-          label="travellers"
-          value={brief.partySize ? String(brief.partySize) : unset}
-          muted={!brief.partySize}
+        <EditableFact
+          label="pace"
+          value={brief.pace}
+          placeholder={unset}
+          options={["relaxed", "moderate", "packed"]}
+          onCommit={(raw) =>
+            onEdit({
+              ...brief,
+              pace: (["relaxed", "moderate", "packed"] as const).find((p) => p === raw) ?? null,
+            })
+          }
         />
       </div>
+
+      <p className="figure text-ink-faint px-4 pb-2 -mt-1">
+        {busy ? "re-planning…" : "click any value to change it — the plan reconverges"}
+      </p>
 
       {(brief.interests.length > 0 || brief.constraints.length > 0 || brief.pace) && (
         <div className="flex flex-wrap items-center gap-1.5 px-4 pb-3">

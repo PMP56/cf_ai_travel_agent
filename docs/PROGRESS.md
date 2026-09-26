@@ -8,7 +8,8 @@ travel workspace rather than a chat app. Decisions locked: all Workers AI (zero 
 keyless data sources only, evolve the existing worker on a `v2` branch, MapLibre + OSM for maps.
 Phase 0 has landed the pattern: `schema/`, `tools/`, `agents/` split, JSON Mode via
 `utils/structured.ts`, two keyless tools (geocoding, climate normals) and two agents (intake,
-climate), behind `POST /api/v2/brief`. **Phase 3 (UI) built** — the frontend is rewritten around the workspace model. **Phase 2 done**
+climate), behind `POST /api/v2/brief`. **Phase 4 (direct manipulation) built.** **Phase 3 (UI) built** — the frontend is rewritten around
+the workspace model. **Phase 2 done**
 apart from Workflows, which is a deliberate decision rather than a task (see below). **Phase 1 complete.** Intake plus four grounded specialists — destination, climate, places, food —
 all verified against a real model and fanning out in parallel. Places produces correct shortlists for Kyoto, Florence
 and Marrakesh with real coordinates throughout. The pipeline is extracted into `pipeline.ts` and streams progress over SSE at
@@ -134,6 +135,27 @@ Assumptions made while writing these docs — correct any that are wrong.
 | 2026-03-18 | (from `4b4f976`) Single-activity replacement sends the whole itinerary to the model | Cheapest way to stop it suggesting an activity already in the plan |
 
 ## Session log
+
+### 2026-09-26 — Phase 4: direct manipulation
+The pipeline now accepts either a message or an **edited brief**. Supplying a brief skips intake
+entirely, so changing "relaxed" to "packed" reconverges against the same structured intent rather
+than re-parsing a new sentence and drifting to a different trip. This is the capability a chat app
+structurally cannot offer, and it is now demonstrable: the same Kyoto brief at `packed` returns 3
+denser days and 16.9km instead of 4 days and 19.2km, with `intake skipped: brief supplied`.
+
+Brief fields are click-to-edit (Enter commits, Escape abandons, keyboard reachable throughout), and
+the itinerary supports reorder, move-to-day, remove and swap-for-an-unscheduled-place, each
+recomputing distances so the kilometre figures never go stale. Edits are tagged with the result they
+were made against and resolved during render, so a newer plan supersedes them without a `setState`
+in an effect.
+
+**Deliberately not drag-and-drop.** Dragging needs a whole parallel affordance to be keyboard
+operable, and "move to day 3" from a select is clearer than dropping a card into the right gap.
+
+Testing the replan exposed a real bug: pace set the number of days but never capped the number of
+places, so a "relaxed 4 days" in Kyoto returned 11 sights across 4 days — which is not relaxed. Pace
+now caps capacity at `days x perDay` and holds the rest back as swap candidates. Measured:
+relaxed 2/day 8.1km, moderate 2-3/day 15.2km, packed 4/day 22.3km.
 
 ### 2026-09-26 — Phase 3: the frontend, rebuilt
 Discarded the chat UI entirely and rebuilt around the workspace model. Research shaped two

@@ -68,6 +68,8 @@ export interface Itinerary {
   days: ItineraryDay[];
   /** Trip days with nothing scheduled, because places ran out. */
   unscheduledDays: number;
+  /** Good places left out to keep the requested pace. Offered as swaps in the UI. */
+  droppedForPace: number;
   totalTravelKm: number;
 }
 
@@ -90,13 +92,22 @@ export async function runComposer(
 
   const perDay = placesPerDay(brief.pace);
   const tripDays = brief.durationDays ?? Math.ceil(places.length / perDay);
-  const activeDays = Math.min(tripDays, Math.ceil(places.length / perDay));
+
+  // Honour the pace by dropping stops, not by packing them in. Asking for a
+  // relaxed 4 days and being handed 11 sights across 4 days is not relaxed;
+  // `places` arrives in the curator's recommendation order, so the first
+  // tripDays * perDay are the ones worth keeping.
+  const capacity = tripDays * perDay;
+  const scheduled = places.slice(0, capacity);
+  const dropped = places.length - scheduled.length;
+
+  const activeDays = Math.min(tripDays, Math.ceil(scheduled.length / perDay));
 
   // Geometry first: this decides WHICH places share a day.
-  const clusters = orderClusters(clusterByDay(places, activeDays), base);
+  const clusters = orderClusters(clusterByDay(scheduled, activeDays), base);
 
   // Index into the flat list so the model can only ever name a real place.
-  const indexOf = new Map<CuratedPlace, number>(places.map((p, i) => [p, i]));
+  const indexOf = new Map<CuratedPlace, number>(scheduled.map((p, i) => [p, i]));
 
   const dayBlocks = clusters
     .map((cluster, i) => {
@@ -153,7 +164,7 @@ export async function runComposer(
     // and the geographic grouping stands.
     let ordered = assigned;
     if (narrative && narrative.order.length === assigned.length) {
-      const candidate = narrative.order.map((idx) => places[idx]);
+      const candidate = narrative.order.map((idx) => scheduled[idx]);
       const sameSet =
         candidate.every((p) => p && assigned.includes(p)) &&
         new Set(candidate).size === assigned.length;
@@ -172,6 +183,7 @@ export async function runComposer(
   return {
     days,
     unscheduledDays: Math.max(0, tripDays - days.length),
+    droppedForPace: dropped,
     totalTravelKm: Math.round(days.reduce((sum, d) => sum + d.travelKm, 0) * 10) / 10,
   };
 }

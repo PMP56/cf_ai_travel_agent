@@ -118,6 +118,8 @@ export interface ItineraryDay {
 export interface Itinerary {
   days: ItineraryDay[];
   unscheduledDays: number;
+  /** Good places left out to keep the requested pace. */
+  droppedForPace: number;
   totalTravelKm: number;
 }
 

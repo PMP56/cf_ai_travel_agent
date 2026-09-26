@@ -125,23 +125,32 @@ export function usePlanStream() {
     setState((prev) => ({ ...prev, running: false }));
   }, [stopClock]);
 
-  const submit = useCallback(
-    async (message: string) => {
+  /**
+   * Start a run. Either a fresh request in the user's words, or an edited
+   * brief — the second skips intake so the plan reconverges against the same
+   * structured intent rather than a re-parsed sentence.
+   */
+  const run = useCallback(
+    async (payload: { message: string } | { brief: TripBrief; place: ResolvedPlace | null }) => {
       abortRef.current?.abort();
       const controller = new AbortController();
       abortRef.current = controller;
 
       const startedAt = Date.now();
-      setState({
+      const editing = "brief" in payload;
+
+      setState((prev) => ({
         running: true,
         agents: idleAgents(),
-        brief: null,
-        place: null,
-        alternatives: [],
+        // Keep the edited brief on screen through the re-run: blanking it would
+        // make the workspace flash back to empty for every small change.
+        brief: editing ? payload.brief : null,
+        place: editing ? payload.place : null,
+        alternatives: editing ? prev.alternatives : [],
         result: null,
         error: null,
         elapsedMs: 0,
-      });
+      }));
 
       stopClock();
       tickRef.current = window.setInterval(() => {
@@ -152,7 +161,7 @@ export function usePlanStream() {
         const res = await fetch(`${API}/api/v2/stream`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ message }),
+          body: JSON.stringify(payload),
           signal: controller.signal,
         });
 
@@ -201,5 +210,12 @@ export function usePlanStream() {
     [apply, stopClock]
   );
 
-  return { ...state, submit, cancel };
+  const submit = useCallback((message: string) => run({ message }), [run]);
+
+  const replan = useCallback(
+    (brief: TripBrief, place: ResolvedPlace | null) => run({ brief, place }),
+    [run]
+  );
+
+  return { ...state, submit, replan, cancel };
 }

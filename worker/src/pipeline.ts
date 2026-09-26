@@ -1,5 +1,5 @@
 import { TripBrief, missingBriefFields } from "./schema/trip";
-import { ResolvedPlace } from "./tools/geocode";
+import { ResolvedPlace, geocodeDestination } from "./tools/geocode";
 import { runIntake } from "./agents/intake";
 import { runClimateAgent, ClimateGuidance } from "./agents/climate";
 import { runPlacesAgent, CuratedPlace } from "./agents/places";
@@ -78,24 +78,55 @@ async function stage<T>(
   }
 }
 
+/**
+ * Either a fresh request in the user's words, or a brief the user has edited.
+ *
+ * The second form is what makes this a workspace rather than a chat: changing
+ * "7 days" to "10" re-runs the plan against the SAME structured intent instead
+ * of re-parsing a new sentence and getting a subtly different trip.
+ */
+export type PipelineInput =
+  | { kind: "message"; message: string }
+  | { kind: "brief"; brief: TripBrief; place: ResolvedPlace | null };
+
 export async function runPipeline(
   ai: Ai,
-  message: string,
+  input: PipelineInput,
   emit: EventSink = () => {}
 ): Promise<PlanResult> {
-  // 1. Intake is the only truly required step: everything downstream reads the
-  //    brief, so a failure here is fatal rather than degraded.
-  const intake = await stage(
-    "intake",
-    emit,
-    null as Awaited<ReturnType<typeof runIntake>> | null,
-    (v) => (v ? `${v.brief.destination}${v.place ? ` → ${v.place.name}, ${v.place.country}` : ""}` : "failed"),
-    () => runIntake(ai, message)
-  );
+  let brief: TripBrief;
+  let place: ResolvedPlace | null;
+  let alternatives: ResolvedPlace[] = [];
 
-  if (!intake) throw new Error("Could not understand the request");
+  if (input.kind === "brief") {
+    // The brief is already settled, so intake has nothing to do. Re-resolve the
+    // destination only if it changed, which is why the caller passes the old one.
+    brief = input.brief;
+    place = input.place;
+    emit({ type: "agent:skipped", agent: "intake", reason: "brief supplied" });
 
-  const { brief, place, alternatives } = intake;
+    const needle = brief.destinationCity ?? brief.destination;
+    if (!place || place.name.toLowerCase() !== needle.toLowerCase()) {
+      const matches = await geocodeDestination(needle).catch(() => []);
+      if (matches.length > 0) place = matches[0];
+    }
+  } else {
+    // Intake is the only truly required step: everything downstream reads the
+    // brief, so a failure here is fatal rather than degraded.
+    const intake = await stage(
+      "intake",
+      emit,
+      null as Awaited<ReturnType<typeof runIntake>> | null,
+      (v) => (v ? `${v.brief.destination}${v.place ? ` → ${v.place.name}, ${v.place.country}` : ""}` : "failed"),
+      () => runIntake(ai, input.message)
+    );
+
+    if (!intake) throw new Error("Could not understand the request");
+    brief = intake.brief;
+    place = intake.place;
+    alternatives = intake.alternatives;
+  }
+
   emit({ type: "brief", brief, place, alternatives });
 
   // 2. Specialists are independent and grounded — fan them out.

@@ -1,6 +1,13 @@
 import { Suspense, lazy, useEffect, useState } from "react";
 import { usePlanStream } from "./usePlanStream";
-import type { CuratedPlace } from "./types";
+import type { CuratedPlace, Itinerary } from "./types";
+import {
+  moveToDay,
+  removePlace,
+  reorderWithinDay,
+  swapPlace,
+  unusedPlaces,
+} from "./itineraryEdits";
 import AgentRail from "./components/AgentRail";
 import BriefBar from "./components/BriefBar";
 import ItineraryView from "./components/ItineraryView";
@@ -53,9 +60,21 @@ export default function App() {
   const [hoveredPlace, setHoveredPlace] = useState<CuratedPlace | null>(null);
   const [activeDay, setActiveDay] = useState<number | null>(null);
 
+  // Local rearrangements, tagged with the result they were made against.
+  // Tying them to a base rather than clearing them in an effect means a new
+  // plan supersedes them during render, with no extra pass.
+  const [edit, setEdit] = useState<{ base: unknown; itinerary: Itinerary } | null>(null);
+
   const { result, brief, place, running } = plan;
   const started = running || brief !== null || result !== null;
   const places = result?.places ?? [];
+  // Edits apply only to the result they were made against; a newer plan wins.
+  const itinerary =
+    (edit && edit.base === result ? edit.itinerary : null) ?? result?.itinerary ?? null;
+  const unused = itinerary ? unusedPlaces(itinerary, places) : [];
+
+  // Every edit recomputes distances, so the kilometre figures never go stale.
+  const applyEdit = (next: Itinerary) => setEdit({ base: result, itinerary: next });
 
   return (
     <div className="h-dvh flex flex-col bg-paper text-ink overflow-hidden">
@@ -121,6 +140,8 @@ export default function App() {
                   place={place}
                   alternatives={plan.alternatives}
                   missing={result?.missing ?? []}
+                  busy={plan.running}
+                  onEdit={(next) => plan.replan(next, place)}
                 />
               )}
 
@@ -133,12 +154,17 @@ export default function App() {
                 />
               </div>
 
-              {result?.itinerary && (
+              {itinerary && (
                 <ItineraryView
-                  itinerary={result.itinerary}
+                  itinerary={itinerary}
                   activeDay={activeDay}
+                  unused={unused}
                   onHoverPlace={setHoveredPlace}
                   onFocusDay={setActiveDay}
+                  onReorder={(d, i, dir) => applyEdit(reorderWithinDay(itinerary, d, i, dir))}
+                  onMoveToDay={(d, i, to) => applyEdit(moveToDay(itinerary, d, i, to))}
+                  onRemove={(d, i) => applyEdit(removePlace(itinerary, d, i))}
+                  onSwap={(d, i, r) => applyEdit(swapPlace(itinerary, d, i, r))}
                 />
               )}
 
@@ -172,7 +198,7 @@ export default function App() {
                 >
                   <MapView
                     place={place}
-                    itinerary={result?.itinerary ?? null}
+                    itinerary={itinerary}
                     places={places}
                     hoveredPlace={hoveredPlace}
                     activeDay={activeDay}

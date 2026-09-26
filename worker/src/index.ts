@@ -5,7 +5,9 @@ import {
 } from "./memory/UserMemory";
 import { executeWorkflow, replaceHighlight } from "./workflow";
 import { corsHeaders, jsonResponse, errorResponse } from "./utils/helpers";
-import { runPipeline, PipelineEvent } from "./pipeline";
+import { runPipeline, PipelineEvent, PipelineInput } from "./pipeline";
+import { TripBrief } from "./schema/trip";
+import { ResolvedPlace } from "./tools/geocode";
 
 export { UserMemory };
 
@@ -135,7 +137,7 @@ export default {
           return errorResponse("message is required", 400, origin);
         }
 
-        const result = await runPipeline(env.AI, message);
+        const result = await runPipeline(env.AI, { kind: "message", message });
         return jsonResponse(result, 200, origin);
       } catch (err) {
         console.error("Error:", err);
@@ -149,22 +151,29 @@ export default {
     // would add a Durable Object and a connection lifecycle for nothing. This
     // is a plain streamed response, and EventSource reconnects on its own.
     if (url.pathname === "/api/v2/stream" && request.method === "POST") {
-      let message: string | undefined;
+      let input: PipelineInput;
       try {
-        const body = (await request.json()) as { message?: string };
-        message = body?.message;
+        const body = (await request.json()) as {
+          message?: string;
+          brief?: TripBrief;
+          place?: ResolvedPlace | null;
+        };
+
+        if (body?.brief && typeof body.brief?.destination === "string") {
+          // Re-plan from an edited brief: skips intake entirely.
+          input = { kind: "brief", brief: body.brief, place: body.place ?? null };
+        } else if (typeof body?.message === "string" && body.message.trim()) {
+          input = { kind: "message", message: body.message };
+        } else {
+          return errorResponse("message or brief is required", 400, origin);
+        }
       } catch {
         return errorResponse("invalid JSON body", 400, origin);
-      }
-
-      if (!message || typeof message !== "string" || !message.trim()) {
-        return errorResponse("message is required", 400, origin);
       }
 
       const encoder = new TextEncoder();
       const { readable, writable } = new TransformStream();
       const writer = writable.getWriter();
-      const prompt = message;
 
       const send = (event: PipelineEvent) => {
         // Fire-and-forget: a client that has hung up must not break the run.
@@ -176,7 +185,7 @@ export default {
       // Run detached so the response streams immediately.
       (async () => {
         try {
-          const result = await runPipeline(env.AI, prompt, send);
+          const result = await runPipeline(env.AI, input, send);
           send({ type: "complete", result });
         } catch (err) {
           console.error("Pipeline error:", err);
