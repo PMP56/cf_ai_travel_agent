@@ -81,9 +81,7 @@ export default {
         );
       } catch (err) {
         console.error("Error:", err);
-        const message =
-          err instanceof Error ? err.message : "Internal server error";
-        return errorResponse(message, 500, origin);
+        return errorResponse("Failed to generate a travel plan", 500, origin);
       }
     }
 
@@ -107,8 +105,7 @@ export default {
         return jsonResponse({ highlight }, 200, origin);
       } catch (err) {
         console.error("Error:", err);
-        const message = err instanceof Error ? err.message : "Internal server error";
-        return errorResponse(message, 500, origin);
+        return errorResponse("Failed to find a replacement activity", 500, origin);
       }
     }
 
@@ -123,9 +120,7 @@ export default {
         return jsonResponse({ profile }, 200, origin);
       } catch (err) {
         console.error("Error:", err);
-        const message =
-          err instanceof Error ? err.message : "Internal server error";
-        return errorResponse(message, 500, origin);
+        return errorResponse("Failed to load profile", 500, origin);
       }
     }
 

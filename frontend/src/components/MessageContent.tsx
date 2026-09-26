@@ -20,12 +20,27 @@ const itemVariants = {
   visible: { opacity: 1, y: 0, transition: { duration: 0.35, ease: [0.25, 0.46, 0.45, 0.94] as const } },
 };
 
+/** "Day 3" -> 3. Non-numeric labels sort last, keeping their relative order. */
+function dayOrder(label: string): number {
+  const match = label.match(/\d+/);
+  return match ? Number(match[0]) : Number.MAX_SAFE_INTEGER;
+}
+
+/**
+ * Group highlights under their day label, in chronological order.
+ * The model is asked for sequential days but does not always comply, and a Map
+ * preserves insertion order — so without this, "Day 3" can render before "Day 2".
+ */
 function groupByDay(highlights: Highlight[]): Map<string, Highlight[]> {
-  return highlights.reduce((map, h) => {
+  const grouped = highlights.reduce((map, h) => {
     const existing = map.get(h.date) ?? [];
     map.set(h.date, [...existing, h]);
     return map;
   }, new Map<string, Highlight[]>());
+
+  return new Map(
+    [...grouped.entries()].sort(([a], [b]) => dayOrder(a) - dayOrder(b))
+  );
 }
 
 // Rotate through accent colors per day for visual variety
@@ -165,6 +180,8 @@ export default function MessageContent({ content, plan, isUser, onReplaceHighlig
                                 {/* Accordion trigger */}
                                 <button
                                   onClick={() => setOpenKey(isOpen ? null : key)}
+                                  aria-expanded={isOpen}
+                                  aria-controls={`highlight-panel-${key}`}
                                   className="w-full flex items-center justify-between gap-3 px-4 py-3 text-left"
                                 >
                                   <div className="flex items-center gap-2.5 flex-1 min-w-0">
@@ -190,6 +207,7 @@ export default function MessageContent({ content, plan, isUser, onReplaceHighlig
                                       animate={{ height: "auto", opacity: 1 }}
                                       exit={{ height: 0, opacity: 0 }}
                                       transition={{ duration: 0.22, ease: [0.4, 0, 0.2, 1] }}
+                                      id={`highlight-panel-${key}`}
                                       className="overflow-hidden"
                                     >
                                       <div className="px-4 pb-3.5 pt-1 border-t border-border/60 space-y-2.5">

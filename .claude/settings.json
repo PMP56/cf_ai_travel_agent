@@ -17,14 +17,10 @@
       "Bash(git show:*)",
       "Bash(git branch:*)",
       "Bash(git ls-files:*)",
-      "Bash(rg:*)",
-      "Bash(grep:*)",
       "Bash(find:*)",
       "Bash(ls:*)",
-      "Bash(cat:*)",
-      "Bash(head:*)",
-      "Bash(tail:*)",
-      "Bash(wc:*)"
+      "Bash(wc:*)",
+      "Bash(npm run typecheck:*)"
     ],
     "deny": [
       "Read(./frontend/.env)",

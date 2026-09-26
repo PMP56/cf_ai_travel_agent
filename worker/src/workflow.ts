@@ -1,10 +1,13 @@
 import { UserProfile } from "./memory/schema";
 import { fetchDestinationPhotos, UnsplashPhoto } from "./utils/photos";
-import { buildPlanPrompt } from "./utils/prompts";
+import { buildPlanPrompt, buildReplaceHighlightPrompt } from "./utils/prompts";
 import { Highlight, TravelPlan } from "./utils/plan";
+import { parseAiJson } from "./utils/aiJson";
+
+const MODEL = "@cf/meta/llama-3.3-70b-instruct-fp8-fast";
 
 export interface WorkflowResult {
-  plan: any;
+  plan: TravelPlan;
   photos: UnsplashPhoto[];
   updatedProfile: UserProfile;
 }
@@ -16,23 +19,9 @@ export interface ReplaceHighlightParams {
   allHighlights: { title: string; date: string }[];
 }
 
-
 function parsePlanResponse(raw: unknown): TravelPlan {
-  let parsed: any;
+  const parsed = parseAiJson(raw, "travel plan");
 
-  if (typeof raw === "object" && raw !== null) {
-    parsed = raw;
-  } else if (typeof raw === "string") {
-    const cleaned = raw
-      .replace(/```json\s*/gi, "")
-      .replace(/```\s*/g, "")
-      .trim();
-    parsed = JSON.parse(cleaned);
-  } else {
-    throw new Error("Unexpected plan response format");
-  }
-
-  // Validate shape before trusting it
   if (
     typeof parsed.destination !== "string" ||
     typeof parsed.destinationOverview !== "string" ||
@@ -40,6 +29,11 @@ function parsePlanResponse(raw: unknown): TravelPlan {
     typeof parsed.optionalAddOns !== "string"
   ) {
     throw new Error("Plan response is missing required fields");
+  }
+
+  // An empty array passes Array.isArray but renders as a plan with no itinerary.
+  if (parsed.highlights.length === 0) {
+    throw new Error("Plan response contains no highlights");
   }
 
   const highlights = parsed.highlights.map((h: any, i: number) => {
@@ -67,8 +61,8 @@ export async function executeWorkflow(
   userProfile: UserProfile,
   unsplashKey: string | undefined
 ): Promise<WorkflowResult> {
-
-  const planResponse = await ai.run("@cf/meta/llama-3.3-70b-instruct-fp8-fast", {
+  // The plan is the only load-bearing call: if it fails, the request fails.
+  const planResponse = await ai.run(MODEL, {
     max_tokens: 2048,
     messages: [
       { role: "system", content: "You are a helpful travel planning assistant. Always respond with raw JSON only." },
@@ -78,29 +72,44 @@ export async function executeWorkflow(
 
   const plan = parsePlanResponse((planResponse as any).response);
 
-  const [photos, memoryResponse] = await Promise.all([
+  // Photos and preference extraction are both enrichment. Neither may take down
+  // a plan that was generated successfully, so both swallow their own failures.
+  const [photos, extractedPrefs] = await Promise.all([
     plan.destination && unsplashKey
-      ? fetchDestinationPhotos(plan.destination, unsplashKey)
-      : Promise.resolve([]),
-    ai.run("@cf/meta/llama-3.3-70b-instruct-fp8-fast", {
-      messages: [
-        { role: "system", content: "Extract concise travel preferences as plain text." },
-        { role: "user", content: `Extract the user's travel preferences from this message: "${message}"
+      ? fetchDestinationPhotos(plan.destination, unsplashKey).catch((err) => {
+          console.error("Photo fetch failed:", err);
+          return [] as UnsplashPhoto[];
+        })
+      : Promise.resolve([] as UnsplashPhoto[]),
+    ai
+      .run(MODEL, {
+        max_tokens: 128,
+        messages: [
+          { role: "system", content: "Extract concise travel preferences as plain text." },
+          {
+            role: "user",
+            content: `Extract the user's travel preferences from this message: "${message}"
             Return a SINGLE short sentence summarizing stable preferences.
             Examples:
             - "Prefers budget-friendly beach vacations."
             - "Likes adventure trips and hiking."
-            Return ONLY the sentence, no JSON, no formatting.` 
-        },
-      ],
-    }),
+            Return ONLY the sentence, no JSON, no formatting.`,
+          },
+        ],
+      })
+      .then((res) => {
+        const text = (res as any)?.response;
+        return typeof text === "string" && text.trim() ? text.trim() : null;
+      })
+      .catch((err) => {
+        console.error("Preference extraction failed:", err);
+        return null;
+      }),
   ]);
 
-  const extractedPrefs = (memoryResponse as any).response as string;
-  const updatedPreferences = [
-    ...(userProfile.preferences ?? []),
-    extractedPrefs,
-  ].slice(-10);
+  const updatedPreferences = extractedPrefs
+    ? [...(userProfile.preferences ?? []), extractedPrefs].slice(-10)
+    : userProfile.preferences ?? [];
 
   return {
     plan,
@@ -109,56 +118,19 @@ export async function executeWorkflow(
   };
 }
 
-
 export async function replaceHighlight(
   ai: Ai,
-  { destination, day, currentTitle, allHighlights }: ReplaceHighlightParams
+  params: ReplaceHighlightParams
 ): Promise<Highlight> {
-  // Build a list of all existing activities so the LLM doesn't suggest duplicates
-  const existingActivities = allHighlights
-    .map((h) => `- ${h.title} (${h.date})`)
-    .join("\n");
-
-  const prompt = `You are a travel planner updating a single activity in an existing itinerary.
-
-Destination: ${destination}
-Day to update: ${day}
-Activity to replace: "${currentTitle}"
-
-Full existing itinerary (do NOT suggest any of these):
-${existingActivities}
-
-Suggest ONE different activity for ${day} in ${destination} that:
-- Is not already in the itinerary above
-- Fits naturally on ${day} alongside any other activities already scheduled that day
-- Is realistic and specific to ${destination}
-
-Return ONLY a raw JSON object, no markdown, no backticks:
-{"title":"...","date":"${day}","description":"..."}
-
-- title: short activity name
-- date: must be exactly "${day}"
-- description: 1–2 sentences describing the activity`;
-
-  const response = await ai.run("@cf/meta/llama-3.3-70b-instruct-fp8-fast", {
+  const response = await ai.run(MODEL, {
     max_tokens: 256,
     messages: [
       { role: "system", content: "You are a travel planner. Always respond with raw JSON only." },
-      { role: "user", content: prompt },
+      { role: "user", content: buildReplaceHighlightPrompt(params) },
     ],
-  }) as any;
+  });
 
-  const raw = response?.response;
-  let parsed: any;
-
-  if (typeof raw === "object" && raw !== null) {
-    parsed = raw;
-  } else if (typeof raw === "string") {
-    const cleaned = raw.replace(/```json\s*/gi, "").replace(/```\s*/g, "").trim();
-    parsed = JSON.parse(cleaned);
-  } else {
-    throw new Error("Unexpected response format from AI");
-  }
+  const parsed = parseAiJson((response as any)?.response, "replacement activity");
 
   if (
     typeof parsed.title !== "string" ||

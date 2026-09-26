@@ -41,3 +41,41 @@ Other rules:
 - Every field must be a non-empty string
 - Do not include any text outside the JSON object`;
 }
+export interface ReplaceHighlightPromptParams {
+  destination: string;
+  day: string;
+  currentTitle: string;
+  allHighlights: { title: string; date: string }[];
+}
+
+export function buildReplaceHighlightPrompt({
+  destination,
+  day,
+  currentTitle,
+  allHighlights,
+}: ReplaceHighlightPromptParams): string {
+  const existingActivities = allHighlights
+    .map((h) => `- ${h.title} (${h.date})`)
+    .join("\n");
+
+  return `You are a travel planner updating a single activity in an existing itinerary.
+
+Destination: ${destination}
+Day to update: ${day}
+Activity to replace: "${currentTitle}"
+
+Full existing itinerary (do NOT suggest any of these):
+${existingActivities}
+
+Suggest ONE different activity for ${day} in ${destination} that:
+- Is not already in the itinerary above
+- Fits naturally on ${day} alongside any other activities already scheduled that day
+- Is realistic and specific to ${destination}
+
+Return ONLY a raw JSON object, no markdown, no backticks:
+{"title":"...","date":"${day}","description":"..."}
+
+- title: short activity name
+- date: must be exactly "${day}"
+- description: 1–2 sentences describing the activity`;
+}

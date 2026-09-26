@@ -41,18 +41,21 @@ Priority order. Prashanna confirmed on 2026-09-26 that this is a portfolio demo 
 intended to become a real user-facing app, so the hardening items stay on the list rather than
 being written off — they move up once real users are in scope.
 
-1. **Retry or degrade on bad model output.** One reparse attempt, or return a partial plan, instead
-   of a 500. Currently the only failure mode the user ever sees.
+1. **Retry on malformed plan JSON.** Enrichment now degrades cleanly, but the plan call itself still
+   has one shot: any validation failure in `parsePlanResponse` is a 500. Add one reparse attempt with
+   a corrective prompt, and consider dropping malformed highlights rather than failing all of them.
+   Truncation at `max_tokens: 2048` is the likeliest trigger on long trips.
 2. **Deduplicate the plan types.** `worker/src/utils/plan.ts` and `frontend/src/types.ts` are
    maintained by hand in parallel, and `buildPlanPrompt` describes the same shape a third time.
-3. **Add a check to the worker.** No lint, no tests — at minimum a `"typecheck": "tsc --noEmit"`
-   script in `worker/package.json`, and ideally Vitest over `parsePlanResponse` and the day grouping.
-4. **Move `replaceHighlight`'s inline prompt into `utils/prompts.ts`**, next to `buildPlanPrompt`.
-5. **Pass `userId` to `/api/replace-highlight`.** The worker's request interface declares it, the
+3. **Add tests.** `worker` now has a `typecheck` script, but neither package has a test runner.
+   `parseAiJson`, `parsePlanResponse` and `groupByDay`/`dayOrder` are pure and worth covering first.
+4. **Pass `userId` to `/api/replace-highlight`.** The worker's request interface declares it, the
    frontend never sends it, nothing uses it. Wire it up or drop it from the interface.
-6. **Bump `compatibility_date`.** It is `2024-01-01` while the code uses modern `cloudflare:workers`
+5. **Bump `compatibility_date`.** It is `2024-01-01` while the code uses modern `cloudflare:workers`
    DO imports and SQLite-backed DO classes.
-7. **Upgrade wrangler.** v3.114.15 installed; v4 is current and warns on every invocation.
+6. **Upgrade wrangler.** v3.114.15 installed; v4 is current and warns on every invocation.
+7. **Prune the Durable Object's dead surface.** `UserMemory` exposes both direct methods and a
+   `fetch` interface; only `fetch` is used, and `reset()` is unreachable from any route.
 
 **Before real users** (deferred by decision, not forgotten):
 
@@ -86,6 +89,9 @@ Assumptions made while writing these docs — correct any that are wrong.
 | 2026-09-26 | Unsplash key moved out of `[vars]` to a secret / `.dev.vars` | Stops the leak growing; git history still holds the old value, so rotation was required too |
 | 2026-09-26 | Key rotated by Prashanna and set via `wrangler secret put`; leaked value now dead | Closes the exposure in commit `9440211` — removal from the tree alone would not have |
 | 2026-09-26 | Root `.env` deleted rather than wired up; `.env`/`.env.*` added to `.gitignore` | Nothing reads a root `.env` (Vite reads `frontend/.env`, wrangler reads `worker/.dev.vars`), and it was unignored — one `git add .` from being committed |
+| 2026-09-26 | Enrichment (photos, preference extraction) swallows its own failures; only the plan call is load-bearing | A generated itinerary should never be lost because a photo CDN was slow |
+| 2026-09-26 | Day ordering fixed in the UI rather than the worker | Sorting at render fixes existing plans too, and the label is a display concern; numeric extraction also handles `Day 10` vs `Day 3` |
+| 2026-09-26 | 500 responses return a generic message; detail goes to `console.error` | Internal error text was reaching clients |
 | 2026-09-26 | `UNSPLASH_SECRET_KEY` deliberately not deployed anywhere | Only used for Unsplash OAuth user-auth; this app does public search with `Client-ID` alone |
 | 2026-09-26 | Photos degrade to `[]` when the key is absent rather than erroring | Keeps local dev usable without a key; the guard already existed, the types now match it |
 | 2026-09-26 | Hardening (CORS, rate limits, real identity) kept in the backlog but ranked below correctness | Demo today, real users later — deferred, explicitly not dropped |
@@ -94,6 +100,18 @@ Assumptions made while writing these docs — correct any that are wrong.
 | 2026-03-18 | (from `4b4f976`) Single-activity replacement sends the whole itinerary to the model | Cheapest way to stop it suggesting an activity already in the plan |
 
 ## Session log
+
+### 2026-09-26 — Code review and fixes
+Full review of `worker/src` and `frontend/src` before starting feature work. Fixed three real bugs:
+days could render out of order (`Day 3` before `Day 2`) because `groupByDay` relied on Map insertion
+order and nothing sorted; a failing Unsplash call or a 200 without `results` rejected the
+`Promise.all` and turned a finished plan into a 500; and `highlights: []` passed validation. Also
+stopped returning internal `err.message` text to clients, extracted the duplicated AI-JSON parsing
+into `utils/aiJson.ts`, moved `replaceHighlight`'s prompt into `utils/prompts.ts`, added a timeout
+and defensive field access to the Unsplash call, capped `max_tokens` on the preference call, added a
+`typecheck` script, and added `aria-expanded`/`aria-controls` to the accordion plus a label on the
+textarea. Removed `Bash(cat|grep|head|tail|rg:*)` from `.claude/settings.json` allow — they defeated
+every `Read(...)` deny rule. All checks clean.
 
 ### 2026-09-26 — Unsplash key rotation
 Prashanna rotated the key, set it via `npx wrangler secret put UNSPLASH_ACCESS_KEY` (confirmed

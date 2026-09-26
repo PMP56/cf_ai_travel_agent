@@ -34,6 +34,7 @@ export default function InputBox({ onSend, disabled }: InputBoxProps) {
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder="Describe your dream trip…"
+              aria-label="Describe your dream trip"
               disabled={disabled}
               rows={1}
               className="flex-1 px-2 py-1.5 bg-transparent focus:outline-none resize-none disabled:opacity-50 disabled:cursor-not-allowed text-sm text-foreground placeholder:text-muted-foreground"
