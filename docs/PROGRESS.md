@@ -8,10 +8,15 @@ travel workspace rather than a chat app. Decisions locked: all Workers AI (zero 
 keyless data sources only, evolve the existing worker on a `v2` branch, MapLibre + OSM for maps.
 Phase 0 has landed the pattern: `schema/`, `tools/`, `agents/` split, JSON Mode via
 `utils/structured.ts`, two keyless tools (geocoding, climate normals) and two agents (intake,
-climate), behind `POST /api/v2/brief`. Phase 1 underway. Intake, climate and **places** all verified against a real model, and the two
-specialists now fan out in parallel. Places produces genuinely correct shortlists for Kyoto and
-Florence with real coordinates throughout. Next: destination (prose/practical info) and food
-specialists, then Phase 2's composer and critic.
+climate), behind `POST /api/v2/brief`. Phase 1 mostly done. Intake, climate, places and **destination** all verified against a real model;
+three specialists now fan out in parallel. Places produces correct shortlists for Kyoto, Florence
+and Marrakesh with real coordinates throughout. Remaining for Phase 1: a food specialist (the
+Wikivoyage "Eat" section is already fetched, so this is cheap). Then Phase 2's composer and critic.
+
+**Known limitation — remote destinations.** Wikipedia geosearch caps at a 10km radius and tiling
+reaches ~46km, but Perito Moreno Glacier is ~78km from El Calafate, so a Patagonia trip currently
+finds only Lake Argentino. The town is the wrong anchor for a region trip; a likely fix is
+discovering places via the Wikivoyage region page's linked destinations rather than by radius.
 
 Hygiene pass complete. The Unsplash key has been rotated, the leaked value is dead, and the new one
 is set as a deployed Cloudflare secret. Cloudflare login is active, so `wrangler dev` can now serve
@@ -112,6 +117,21 @@ Assumptions made while writing these docs — correct any that are wrong.
 | 2026-03-18 | (from `4b4f976`) Single-activity replacement sends the whole itinerary to the model | Cheapest way to stop it suggesting an activity already in the plan |
 
 ## Session log
+
+### 2026-09-26 — Destination specialist
+Added `tools/wikivoyage.ts` and the destination agent. Uses plain-text extracts rather than
+wikitext — the markup is inconsistent between articles and not worth parsing, while `explaintext`
+returns clean prose with headers intact. Article titles resolve through search, so "Marrakesh"
+correctly finds "Marrakech".
+
+Where a region page is thin (Patagonia has only a lead paragraph) the agent prefers the gateway
+city's fuller guide. Three specialists now fan out in parallel.
+
+Two things worth recording from the verification run. Marrakesh produced genuinely local safety
+advice — the "this street is closed" scam — which is exactly the kind of thing a model recalling
+from memory would replace with generic pickpocket warnings. And for El Calafate, whose guide covers
+neither safety nor etiquette, the model returned empty strings rather than inventing them, so the
+"return blank rather than fill from your own knowledge" instruction holds under test.
 
 ### 2026-09-26 — Places: three layers of silent data loss
 Chased the missing Uffizi. It was not one bug but three, each hiding the next, and all of the same

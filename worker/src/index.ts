@@ -8,6 +8,7 @@ import { corsHeaders, jsonResponse, errorResponse } from "./utils/helpers";
 import { runIntake } from "./agents/intake";
 import { runClimateAgent } from "./agents/climate";
 import { runPlacesAgent } from "./agents/places";
+import { runDestinationAgent } from "./agents/destination";
 import { missingBriefFields } from "./schema/trip";
 
 export { UserMemory };
@@ -142,24 +143,32 @@ export default {
 
         // Specialists are independent and grounded — fan them out. Each
         // catches its own failure: no specialist may take down the brief.
-        const [climate, places] = place
-          ? await Promise.all([
-              runClimateAgent(env.AI, brief, place).catch((err) => {
+        const [climate, places, destination] = await Promise.all([
+          place
+            ? runClimateAgent(env.AI, brief, place).catch((err) => {
                 console.error("Climate agent failed:", err);
                 return null;
-              }),
-              runPlacesAgent(env.AI, brief, place).catch((err) => {
+              })
+            : Promise.resolve(null),
+          place
+            ? runPlacesAgent(env.AI, brief, place).catch((err) => {
                 console.error("Places agent failed:", err);
                 return [];
-              }),
-            ])
-          : [null, []];
+              })
+            : Promise.resolve([]),
+          // Destination needs no geocode — it works from the name alone.
+          runDestinationAgent(env.AI, brief).catch((err) => {
+            console.error("Destination agent failed:", err);
+            return null;
+          }),
+        ]);
 
         return jsonResponse(
           {
             brief,
             place,
             alternatives,
+            destination,
             climate,
             places,
             missing: missingBriefFields(brief),
