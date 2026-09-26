@@ -1,4 +1,5 @@
 import { Suspense, lazy, useEffect, useState } from "react";
+import { TriangleAlert } from "lucide-react";
 import { usePlanStream } from "./usePlanStream";
 import type { CuratedPlace, Itinerary } from "./types";
 import {
@@ -66,7 +67,11 @@ export default function App() {
   const [edit, setEdit] = useState<{ base: unknown; itinerary: Itinerary } | null>(null);
 
   const { result, brief, place, running } = plan;
-  const started = running || brief !== null || result !== null;
+  // `error` belongs here. Without it a failed run cleared `running` while brief
+  // and result were still null, so the workspace unmounted and bounced back to
+  // the cold-start screen — hiding the very message that explains what went
+  // wrong, because it renders inside the workspace.
+  const started = running || brief !== null || result !== null || plan.error !== null;
   const places = result?.places ?? [];
   // Edits apply only to the result they were made against; a newer plan wins.
   const itinerary =
@@ -141,9 +146,22 @@ export default function App() {
               />
 
               {plan.error && (
-                <p className="figure text-bad border border-bad/40 rounded-sm px-3 py-2">
-                  {plan.error}
-                </p>
+                <div
+                  role="alert"
+                  className="border border-bad/40 bg-bad/5 rounded-sm px-4 py-3 flex gap-3"
+                >
+                  <TriangleAlert className="w-4 h-4 text-bad shrink-0 mt-0.5" aria-hidden />
+                  <div className="min-w-0">
+                    <p className="text-[13.5px] text-ink leading-relaxed">{plan.error}</p>
+                    <button
+                      type="button"
+                      onClick={plan.reset}
+                      className="figure mt-2 px-2 py-1 border border-rule-strong rounded-xs text-ink-soft hover:border-ink-faint hover:text-ink transition-colors"
+                    >
+                      start over
+                    </button>
+                  </div>
+                </div>
               )}
 
               {brief && (

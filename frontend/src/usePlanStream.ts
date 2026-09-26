@@ -165,9 +165,16 @@ export function usePlanStream() {
           signal: controller.signal,
         });
 
-        if (!res.ok || !res.body) {
-          throw new Error(`Server responded ${res.status}`);
+        if (!res.ok) {
+          // The worker explains itself in the body — a bare status code sends
+          // people hunting for a problem that is already described.
+          const detail = await res
+            .json()
+            .then((b) => (b as { error?: string })?.error)
+            .catch(() => null);
+          throw new Error(detail || `The planner responded ${res.status}.`);
         }
+        if (!res.body) throw new Error("The planner returned an empty response.");
 
         const reader = res.body.getReader();
         const decoder = new TextDecoder();
@@ -212,10 +219,27 @@ export function usePlanStream() {
 
   const submit = useCallback((message: string) => run({ message }), [run]);
 
+  /** Clear everything and return to the cold-start screen. */
+  const reset = useCallback(() => {
+    abortRef.current?.abort();
+    abortRef.current = null;
+    stopClock();
+    setState({
+      running: false,
+      agents: idleAgents(),
+      brief: null,
+      place: null,
+      alternatives: [],
+      result: null,
+      error: null,
+      elapsedMs: 0,
+    });
+  }, [stopClock]);
+
   const replan = useCallback(
     (brief: TripBrief, place: ResolvedPlace | null) => run({ brief, place }),
     [run]
   );
 
-  return { ...state, submit, replan, cancel };
+  return { ...state, submit, replan, cancel, reset };
 }

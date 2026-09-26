@@ -137,6 +137,33 @@ Assumptions made while writing these docs — correct any that are wrong.
 
 ## Session log
 
+### 2026-09-26 — Bounce-back on failure; Workers AI free tier exhausted
+Clicking an example destination flashed the workspace and returned to the cold-start screen.
+Reproduced in a headless browser and instrumented the stream hook: `run()` fired once, nothing
+aborted, and the SSE stream closed 264ms in with HTTP 200. The worker was reporting
+
+    4006: you have used up your daily free allocation of 10,000 neurons
+
+which is precisely the budget calculated in PLAN-v2 §5 — about 1,450 neurons a plan against
+10,000/day, so roughly seven plans. A day of testing spent it.
+
+The quota is a constraint, not a bug, but it exposed two real ones.
+
+**The workspace unmounted on failure.** `started` was `running || brief || result`, so a failed run
+cleared `running` while brief and result were still null — the workspace disappeared and took the
+error message with it, since the error renders inside the workspace. `started` now includes `error`,
+and there is a "start over" control to get back deliberately.
+
+**The real reason was being discarded.** Intake ran through the generic `stage()` wrapper, which
+swallowed the cause and reported every failure as "Could not understand the request" — sending
+people off to rewrite a perfectly good sentence. Intake is now handled inline so the cause survives,
+and `explainFailure()` maps the common upstream faults (quota, rate limit, timeout) to something
+actionable. Six tests cover it; one caught that the matcher looked for "timeout" while the real
+wording is "timed out".
+
+**Note for whoever hits this next:** the free tier really is about seven plans a day. Local
+`wrangler dev` spends the same quota as production, so a testing session exhausts it quickly.
+
 ### 2026-09-26 — UI rework, driven by actual screenshots
 Installed Playwright and drove a headless browser so the interface could be looked at rather than
 reasoned about. That immediately found three bugs no amount of code review would have caught.

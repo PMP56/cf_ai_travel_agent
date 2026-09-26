@@ -51,6 +51,29 @@ export interface PlanResult {
 export type EventSink = (event: PipelineEvent) => void;
 
 /**
+ * Turn an upstream failure into something a user can act on.
+ *
+ * Workers AI reports an exhausted free tier as error 4006, and the free
+ * allowance is only about seven full plans a day — so this is the failure this
+ * project hits most often. Reporting it as "could not understand the request"
+ * sends people off rewriting a perfectly good sentence.
+ */
+export function explainFailure(err: unknown): string {
+  const message = err instanceof Error ? err.message : String(err);
+
+  if (message.includes("4006") || message.toLowerCase().includes("daily free allocation")) {
+    return "Out of Workers AI credit for today — the free tier covers roughly seven plans per day. It resets at 00:00 UTC, or the Workers Paid plan removes the cap.";
+  }
+  if (message.includes("429") || message.toLowerCase().includes("rate limit")) {
+    return "The planner is rate limited right now. Wait a moment and try again.";
+  }
+  if (/timed out|timeout|aborted|abort/i.test(message)) {
+    return "A source took too long to respond. Try again.";
+  }
+  return `Could not build a plan: ${message}`;
+}
+
+/**
  * Wrap an agent so it always reports, always times itself, and never throws.
  * Specialists are enrichment — one failing must not lose the others' work.
  */
@@ -112,19 +135,28 @@ export async function runPipeline(
     }
   } else {
     // Intake is the only truly required step: everything downstream reads the
-    // brief, so a failure here is fatal rather than degraded.
-    const intake = await stage(
-      "intake",
-      emit,
-      null as Awaited<ReturnType<typeof runIntake>> | null,
-      (v) => (v ? `${v.brief.destination}${v.place ? ` → ${v.place.name}, ${v.place.country}` : ""}` : "failed"),
-      () => runIntake(ai, input.message)
-    );
+    // brief, so a failure here is fatal rather than degraded. It is handled
+    // inline rather than through stage() so the real reason survives — wrapping
+    // it lost the cause and reported every failure as unintelligible input.
+    const started = Date.now();
+    emit({ type: "agent:start", agent: "intake" });
 
-    if (!intake) throw new Error("Could not understand the request");
-    brief = intake.brief;
-    place = intake.place;
-    alternatives = intake.alternatives;
+    try {
+      const intake = await runIntake(ai, input.message);
+      emit({
+        type: "agent:done",
+        agent: "intake",
+        ms: Date.now() - started,
+        summary: `${intake.brief.destination}${intake.place ? ` → ${intake.place.name}, ${intake.place.country}` : ""}`,
+      });
+      brief = intake.brief;
+      place = intake.place;
+      alternatives = intake.alternatives;
+    } catch (err) {
+      const reason = explainFailure(err);
+      emit({ type: "agent:failed", agent: "intake", ms: Date.now() - started, reason });
+      throw new Error(reason);
+    }
   }
 
   emit({ type: "brief", brief, place, alternatives });
