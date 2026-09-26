@@ -1,150 +1,200 @@
-import { useEffect, useState } from "react";
-import { Plane, PanelRight, Sun, Moon } from "lucide-react";
-import ChatWindow from "./components/ChatWindow";
-import InputBox from "./components/InputBox";
-import WelcomeScreen from "./components/WelcomeScreen";
-import type { ChatMessage, Highlight, TravelAPIResponse } from "./types";
+import { Suspense, lazy, useEffect, useState } from "react";
+import { usePlanStream } from "./usePlanStream";
+import type { CuratedPlace } from "./types";
+import AgentRail from "./components/AgentRail";
+import BriefBar from "./components/BriefBar";
+import ItineraryView from "./components/ItineraryView";
+// MapLibre is ~900kB of the bundle and the cold-start screen never shows a
+// map, so it loads only once a destination has been resolved.
+const MapView = lazy(() => import("./components/MapView"));
+import PromptBar from "./components/PromptBar";
+import {
+  ClimatePanel,
+  CritiquePanel,
+  DestinationPanel,
+  FoodPanel,
+} from "./components/Dossier";
 
-const API_ENDPOINT = import.meta.env.VITE_API_ENDPOINT || "http://localhost:8787";
+/**
+ * Workspace shell.
+ *
+ * Three regions rather than a scrolling conversation: the dossier (left), the
+ * map (right), and the pipeline telemetry that runs alongside both. The brief
+ * stays on screen for the whole session because it is state, not a sent
+ * message — that distinction is the entire reason this is not a chat app.
+ */
 
-export default function Index() {
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      role: "assistant",
-      content: "Hello! I'm your AI Travel Guide. Tell me about your dream trip and I'll help you plan it!",
-    },
-  ]);
-  const [loading, setLoading] = useState(false);
-  const [isGalleryVisible, setIsGalleryVisible] = useState(true);
-
-  const [isDark, setIsDark] = useState(() => {
-    const saved = localStorage.getItem("theme");
-    if (saved) return saved === "dark";
+function useTheme() {
+  const [dark, setDark] = useState(() => {
+    try {
+      const saved = localStorage.getItem("theme");
+      if (saved) return saved === "dark";
+    } catch {
+      // Private mode or blocked storage — fall through to the OS preference.
+    }
     return window.matchMedia("(prefers-color-scheme: dark)").matches;
   });
 
-  const [userId] = useState(() => {
-    const saved = localStorage.getItem("userId");
-    if (saved) return saved;
-    const newId = `user_${crypto.randomUUID()}`;
-    localStorage.setItem("userId", newId);
-    return newId;
-  });
-
   useEffect(() => {
-    document.documentElement.classList.toggle("dark", isDark);
-    localStorage.setItem("theme", isDark ? "dark" : "light");
-  }, [isDark]);
-
-  const handleSendMessage = async (message: string) => {
-    setMessages((prev) => [...prev, { role: "user", content: message }]);
-    setLoading(true);
+    document.documentElement.classList.toggle("dark", dark);
     try {
-      const response = await fetch(`${API_ENDPOINT}/api/generate`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId, message }),
-      });
-      if (!response.ok) throw new Error("Failed to generate travel plan");
-      const data: TravelAPIResponse = await response.json();
-
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: "assistant",
-          content: data.plan.destinationOverview, // plain string fallback for simple renderers
-          plan: data.plan,                        // full structured plan for rich UI
-          photos: data.photos ?? [],
-        },
-      ]);
-    } catch (err) {
-      console.error("Error:", err);
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: "assistant",
-          content: "Sorry, I encountered an error. Please try again.",
-        },
-      ]);
-    } finally {
-      setLoading(false);
+      localStorage.setItem("theme", dark ? "dark" : "light");
+    } catch {
+      // Not being able to remember the choice is not worth breaking over.
     }
-  };
+  }, [dark]);
 
-  const isEmpty = messages.length === 1;
-  const hasPhotos = messages.some((m) => m.photos && m.photos.length > 0);
+  return [dark, setDark] as const;
+}
 
-  const handleReplaceHighlight = (
-    messageIdx: number,
-    day: string,
-    currentTitle: string,
-    replacement: Highlight
-  ) => {
-    setMessages((prev) =>
-      prev.map((msg, idx): ChatMessage => {
-        if (idx !== messageIdx || !msg.plan) return msg;
-        return {
-          ...msg,
-          plan: {
-            ...msg.plan,
-            highlights: msg.plan.highlights.map((h) =>
-              h.date === day && h.title === currentTitle ? replacement : h
-            ) as Highlight[],
-          },
-        };
-      })
-    );
-  };
+export default function App() {
+  const plan = usePlanStream();
+  const [dark, setDark] = useTheme();
+  const [hoveredPlace, setHoveredPlace] = useState<CuratedPlace | null>(null);
+  const [activeDay, setActiveDay] = useState<number | null>(null);
+
+  const { result, brief, place, running } = plan;
+  const started = running || brief !== null || result !== null;
+  const places = result?.places ?? [];
 
   return (
-    <div className="h-screen w-full flex flex-col bg-background overflow-hidden font-body">
-      {/* Header */}
-      <header className="h-16 px-6 flex items-center justify-between border-b border-border bg-background/80 backdrop-blur-md z-50 flex-shrink-0">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 bg-primary rounded-xl flex items-center justify-center shadow-sm">
-            <Plane className="w-4.5 h-4.5 text-primary-foreground" />
-          </div>
-          <span className="font-display text-xl font-semibold tracking-tight text-foreground">
-            Travel Agent
-          </span>
+    <div className="h-dvh flex flex-col bg-paper text-ink overflow-hidden">
+      {/* ---- Masthead ---- */}
+      <header className="flex items-center justify-between px-4 h-12 border-b border-rule-strong shrink-0">
+        <div className="flex items-baseline gap-2.5">
+          <span className="display text-[19px]">Field Guide</span>
+          <span className="eyebrow hidden sm:inline">grounded trip planning</span>
         </div>
 
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setIsDark(!isDark)}
-            className="w-9 h-9 rounded-lg flex items-center justify-center hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
-            aria-label="Toggle theme"
-          >
-            {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-          </button>
-          {!isEmpty && hasPhotos && (
-            <button
-              onClick={() => setIsGalleryVisible(!isGalleryVisible)}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-muted transition-colors text-sm font-medium text-muted-foreground hover:text-foreground"
-            >
-              <PanelRight
-                className={`w-4 h-4 transition-colors ${isGalleryVisible ? "text-primary" : ""}`}
-              />
-              {isGalleryVisible ? "Hide Gallery" : "Show Gallery"}
-            </button>
-          )}
-        </div>
+        <button
+          type="button"
+          onClick={() => setDark(!dark)}
+          className="figure px-2 py-1 border border-rule rounded-xs text-ink-soft hover:border-ink-faint hover:text-ink transition-colors"
+          aria-label={dark ? "Switch to light theme" : "Switch to dark theme"}
+        >
+          {dark ? "light" : "dark"}
+        </button>
       </header>
 
-      {/* Main area */}
-      <main className="flex-1 flex overflow-hidden relative">
-        {isEmpty ? (
-          <WelcomeScreen onSend={handleSendMessage} />
-        ) : (
-          <ChatWindow
-            messages={messages}
-            loading={loading}
-            isGalleryVisible={isGalleryVisible}
-            onReplaceHighlight={handleReplaceHighlight}
-          />
-        )}
-        <InputBox onSend={handleSendMessage} disabled={loading} />
-      </main>
+      {!started ? (
+        /* ---- Cold start: one question, centred ---- */
+        <main className="flex-1 grid place-items-center px-6 overflow-y-auto">
+          <div className="w-full max-w-[600px] py-12">
+            <p className="eyebrow">Plan a trip</p>
+            <h1 className="display text-[clamp(38px,7vw,68px)] mt-2 mb-3">
+              Every place, verified.
+            </h1>
+            <p className="text-[14px] text-ink-soft leading-relaxed mb-7 max-w-[46ch]">
+              Seven agents work in parallel over real sources — Wikipedia, Wikivoyage and
+              the ERA5 climate archive. Nothing in your itinerary is invented, and you can
+              watch each one report as it goes.
+            </p>
+            <PromptBar
+              onSubmit={plan.submit}
+              onCancel={plan.cancel}
+              running={plan.running}
+            />
+          </div>
+        </main>
+      ) : (
+        /* ---- Working view ---- */
+        <main className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,440px)]">
+          {/* Dossier column */}
+          <div className="min-h-0 overflow-y-auto border-r border-rule">
+            <div className="max-w-[760px] mx-auto px-4 py-4 space-y-4">
+              <PromptBar
+                onSubmit={plan.submit}
+                onCancel={plan.cancel}
+                running={plan.running}
+                compact
+              />
+
+              {plan.error && (
+                <p className="figure text-bad border border-bad/40 rounded-sm px-3 py-2">
+                  {plan.error}
+                </p>
+              )}
+
+              {brief && (
+                <BriefBar
+                  brief={brief}
+                  place={place}
+                  alternatives={plan.alternatives}
+                  missing={result?.missing ?? []}
+                />
+              )}
+
+              {/* Telemetry sits inline on narrow screens, in the rail on wide ones. */}
+              <div className="lg:hidden">
+                <AgentRail
+                  agents={plan.agents}
+                  running={plan.running}
+                  elapsedMs={plan.elapsedMs}
+                />
+              </div>
+
+              {result?.itinerary && (
+                <ItineraryView
+                  itinerary={result.itinerary}
+                  activeDay={activeDay}
+                  onHoverPlace={setHoveredPlace}
+                  onFocusDay={setActiveDay}
+                />
+              )}
+
+              {result && (
+                <div className="grid sm:grid-cols-2 gap-4">
+                  {result.destination && <DestinationPanel brief={result.destination} />}
+                  {result.climate && <ClimatePanel climate={result.climate} />}
+                  {result.food && <FoodPanel food={result.food} />}
+                  {result.critique && <CritiquePanel critique={result.critique} />}
+                </div>
+              )}
+
+              {running && !result && (
+                <p className="figure text-ink-faint" aria-live="polite">
+                  Working — the itinerary appears once every agent has reported.
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* Map + telemetry rail */}
+          <aside className="hidden lg:flex flex-col min-h-0">
+            <div className="flex-1 min-h-0 relative">
+              {place ? (
+                <Suspense
+                  fallback={
+                    <div className="h-full grid place-items-center bg-paper-sunken">
+                      <span className="figure text-ink-faint">loading map…</span>
+                    </div>
+                  }
+                >
+                  <MapView
+                    place={place}
+                    itinerary={result?.itinerary ?? null}
+                    places={places}
+                    hoveredPlace={hoveredPlace}
+                    activeDay={activeDay}
+                  />
+                </Suspense>
+              ) : (
+                <div className="h-full grid place-items-center bg-paper-sunken">
+                  <span className="figure text-ink-faint">locating…</span>
+                </div>
+              )}
+            </div>
+
+            <div className="shrink-0 border-t border-rule-strong p-3">
+              <AgentRail
+                agents={plan.agents}
+                running={plan.running}
+                elapsedMs={plan.elapsedMs}
+              />
+            </div>
+          </aside>
+        </main>
+      )}
     </div>
   );
 }

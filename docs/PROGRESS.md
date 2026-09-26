@@ -8,8 +8,8 @@ travel workspace rather than a chat app. Decisions locked: all Workers AI (zero 
 keyless data sources only, evolve the existing worker on a `v2` branch, MapLibre + OSM for maps.
 Phase 0 has landed the pattern: `schema/`, `tools/`, `agents/` split, JSON Mode via
 `utils/structured.ts`, two keyless tools (geocoding, climate normals) and two agents (intake,
-climate), behind `POST /api/v2/brief`. **Phase 2 nearly done** — composer, critic, progress streaming and caching all landed. Only
-Workflows remains, and it is now a deliberate decision rather than a task (see below). **Phase 1 complete.** Intake plus four grounded specialists — destination, climate, places, food —
+climate), behind `POST /api/v2/brief`. **Phase 3 (UI) built** — the frontend is rewritten around the workspace model. **Phase 2 done**
+apart from Workflows, which is a deliberate decision rather than a task (see below). **Phase 1 complete.** Intake plus four grounded specialists — destination, climate, places, food —
 all verified against a real model and fanning out in parallel. Places produces correct shortlists for Kyoto, Florence
 and Marrakesh with real coordinates throughout. The pipeline is extracted into `pipeline.ts` and streams progress over SSE at
 `POST /api/v2/stream`, which is the feed Phase 3's activity strip needs. A Kyoto run: intake 3.0s,
@@ -134,6 +134,32 @@ Assumptions made while writing these docs — correct any that are wrong.
 | 2026-03-18 | (from `4b4f976`) Single-activity replacement sends the whole itinerary to the model | Cheapest way to stop it suggesting an activity already in the plan |
 
 ## Session log
+
+### 2026-09-26 — Phase 3: the frontend, rebuilt
+Discarded the chat UI entirely and rebuilt around the workspace model. Research shaped two
+decisions. On agent UX, current practice is to expose tool execution — each call, its elapsed time,
+its result — rather than hide it, so the pipeline telemetry became a first-class panel instead of a
+spinner. On visual design, the documented backlash is against the house style the old UI was a
+textbook example of: pastel gradients, soft rounded cards, friendly sans-serif, decorative fluff.
+The counter-direction is editorial typography and real data shown as data.
+
+So the design is a **field dossier**: Instrument Serif for place names, Inter for interface, and
+JetBrains Mono for anything measured. Coordinates, kilometres, pageviews-per-day and degrees are
+all on screen, because "nothing here was invented" is the product's actual claim and the interface
+should show receipts rather than ask for trust.
+
+New: `usePlanStream` (fetch + reader, since EventSource cannot POST), `AgentRail`, `BriefBar`,
+`ItineraryView`, `MapView` (MapLibre + OSM, markers coloured by day), `Dossier` panels, `PromptBar`.
+Deleted all six old components. Accessibility was designed in, not retrofitted: focus-visible rings,
+`prefers-reduced-motion`, aria-live on the running clock, screen-reader text for the status glyphs,
+and labelled controls.
+
+MapLibre is ~1MB, so it is lazy-loaded — the cold-start screen has no map, and the initial bundle
+went from 353kB gzipped to 67kB.
+
+**Not visually verified.** Build, lint, typecheck, CORS preflight and live SSE parsing are all
+confirmed, and the event shapes match the worker exactly, but no browser was available in this
+session to look at the rendered result. Layout and visual polish need a human pass.
 
 ### 2026-09-26 — Progress streaming and caching
 Extracted the pipeline out of the route handler into `pipeline.ts` so one implementation serves both
