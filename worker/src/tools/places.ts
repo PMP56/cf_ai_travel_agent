@@ -26,6 +26,15 @@ const TIMEOUT_MS = 10000;
 const EXTRACT_BATCH = 20;
 const PAGEVIEW_BATCH = 50;
 
+/**
+ * Ceiling on candidates sent for ranking; 500 = 10 pageview batches.
+ * The cap sorts by distance, which is a poor proxy for interest, so it must sit
+ * comfortably above what a single city search returns (Florence 435, Kyoto 429)
+ * — at 300 it cut Fushimi Inari at 6.2km and the Uffizi out of a centre that
+ * has 300+ geotagged articles inside 400m.
+ */
+const MAX_CANDIDATE_POOL = 500;
+
 export interface NotablePlace {
   title: string;
   latitude: number;
@@ -104,10 +113,87 @@ async function wikiCall(params: Record<string, string>): Promise<any> {
   return data;
 }
 
+/**
+ * MediaWiki paginates prop queries. With a large batch it returns PARTIAL data
+ * plus a `continue` token and no error — so a title can silently come back with
+ * no `pageviews` field while its neighbours in the same request have one. That
+ * is how the Uffizi (430 views/day) kept vanishing from Florence.
+ *
+ * Follows continuation until the batch is complete, merging pages by title.
+ */
+async function wikiCallComplete(
+  params: Record<string, string>,
+  maxRounds = 8
+): Promise<Map<string, any>> {
+  const merged = new Map<string, any>();
+  let cont: Record<string, string> = {};
+
+  for (let round = 0; round < maxRounds; round++) {
+    const data = await wikiCall({ ...params, ...cont });
+
+    for (const page of data?.query?.pages ?? []) {
+      if (typeof page?.title !== "string") continue;
+      const existing = merged.get(page.title);
+      merged.set(page.title, existing ? { ...existing, ...page } : page);
+    }
+
+    if (!data?.continue) return merged;
+    cont = data.continue as Record<string, string>;
+  }
+
+  return merged;
+}
+
 function chunk<T>(items: T[], size: number): T[][] {
   const out: T[][] = [];
   for (let i = 0; i < items.length; i += size) out.push(items.slice(i, i + size));
   return out;
+}
+
+/**
+ * Tiled searches can yield ~1,500 unique candidates, which is 30 pageview
+ * batches. Firing those at once gets rate limited, and a rate-limited batch
+ * silently scores its titles zero — that is how the Uffizi (430 views/day,
+ * 0.4km from the centre) vanished from a Florence shortlist. Bounded
+ * concurrency plus one retry, rather than a burst.
+ */
+const MAX_CONCURRENT_BATCHES = 4;
+
+async function mapWithConcurrency<T, R>(
+  items: T[],
+  limit: number,
+  fn: (item: T) => Promise<R>
+): Promise<R[]> {
+  const results: R[] = new Array(items.length);
+  let next = 0;
+
+  async function worker(): Promise<void> {
+    while (true) {
+      const index = next++;
+      if (index >= items.length) return;
+      results[index] = await fn(items[index]);
+    }
+  }
+
+  await Promise.all(
+    Array.from({ length: Math.min(limit, items.length) }, () => worker())
+  );
+  return results;
+}
+
+/** One retry with a short backoff; transient 429s are the common failure. */
+async function withRetry<T>(fn: () => Promise<T>, label: string): Promise<T | null> {
+  try {
+    return await fn();
+  } catch (first) {
+    await new Promise((r) => setTimeout(r, 400));
+    try {
+      return await fn();
+    } catch (second) {
+      console.error(`${label} failed twice: ${second}`);
+      return null;
+    }
+  }
 }
 
 /**
@@ -175,29 +261,31 @@ async function pageviews(titles: string[]): Promise<Map<string, number>> {
   const views = new Map<string, number>();
 
   const groups = chunk(titles, PAGEVIEW_BATCH);
-  const batches = await Promise.all(
-    groups.map((group) =>
-      wikiCall({
-        action: "query",
-        prop: "pageviews",
-        pvipdays: "30",
-        titles: group.join("|"),
-      }).catch((err) => {
-        // Loud, because a dropped batch silently demotes real attractions to
-        // zero views and they then fail the notability threshold.
-        console.error(`Pageview batch of ${group.length} failed: ${err}`);
-        return null;
-      })
+  const batches = await mapWithConcurrency(groups, MAX_CONCURRENT_BATCHES, (group) =>
+    withRetry(
+      () =>
+        wikiCallComplete({
+          action: "query",
+          prop: "pageviews",
+          pvipdays: "30",
+          titles: group.join("|"),
+        }),
+      `Pageview batch of ${group.length}`
     )
   );
 
+  // ANY lost batch means real attractions are being scored zero and silently
+  // dropped, so this is worth failing on rather than degrading quietly.
   const failed = batches.filter((b) => b === null).length;
-  if (failed > 0 && failed === groups.length) {
-    throw new Error("All pageview batches failed; cannot rank places");
+  if (failed > 0) {
+    throw new Error(
+      `${failed}/${groups.length} pageview batches failed; ranking would silently omit real places`
+    );
   }
 
-  for (const data of batches) {
-    for (const page of data?.query?.pages ?? []) {
+  for (const pages of batches) {
+    if (!pages) continue;
+    for (const page of pages.values()) {
       const daily = Object.values(page?.pageviews ?? {}).filter(
         (v): v is number => typeof v === "number"
       );
@@ -214,23 +302,27 @@ async function pageviews(titles: string[]): Promise<Map<string, number>> {
 async function summaries(titles: string[]): Promise<Map<string, string>> {
   const out = new Map<string, string>();
 
-  const batches = await Promise.all(
-    chunk(titles, EXTRACT_BATCH).map((group: string[]) =>
-      wikiCall({
-        action: "query",
-        prop: "extracts",
-        exintro: "1",
-        explaintext: "1",
-        titles: group.join("|"),
-      }).catch((err) => {
-        console.error(`Extract batch of ${group.length} failed: ${err}`);
-        return null;
-      })
-    )
+  // Extracts are cosmetic — a missing summary degrades gracefully.
+  const batches = await mapWithConcurrency(
+    chunk(titles, EXTRACT_BATCH),
+    MAX_CONCURRENT_BATCHES,
+    (group) =>
+      withRetry(
+        () =>
+          wikiCallComplete({
+            action: "query",
+            prop: "extracts",
+            exintro: "1",
+            explaintext: "1",
+            titles: group.join("|"),
+          }),
+        `Extract batch of ${group.length}`
+      )
   );
 
-  for (const data of batches) {
-    for (const page of data?.query?.pages ?? []) {
+  for (const pages of batches) {
+    if (!pages) continue;
+    for (const page of pages.values()) {
       if (typeof page?.title === "string" && typeof page?.extract === "string") {
         // First two sentences is plenty for a prompt, and keeps output tokens down.
         const trimmed = page.extract.replace(/\s+/g, " ").trim();
@@ -288,7 +380,14 @@ export async function findNotablePlaces(
     }
   }
 
-  const visitable = [...byTitle.values()].filter((c) => isVisitable(c.title, destinationName));
+  // Cap the pool before ranking: every extra candidate is pageview traffic, and
+  // beyond a few hundred the tail is noise. Nearest-first, since attractions
+  // cluster centrally.
+  const visitable = [...byTitle.values()]
+    .filter((c) => isVisitable(c.title, destinationName))
+    .sort((a, b) => a.dist - b.dist)
+    .slice(0, MAX_CANDIDATE_POOL);
+
   if (visitable.length === 0) return [];
 
   const views = await pageviews(visitable.map((c) => c.title));
@@ -319,7 +418,11 @@ export async function findNotablePlaces(
  * attraction set; a small town is a base for things well outside it.
  */
 export function radiusForPopulation(population: number | null): number {
-  if (population === null || population < 20000) return 60000;
-  if (population < 200000) return 30000;
-  return 15000;
+  // A city fits inside one 10km search, and staying at 10km avoids tiling
+  // entirely — tiling multiplies candidates without adding reach, which then
+  // forces the distance cap to discard genuinely notable places.
+  if (population !== null && population >= 200000) return GEOSEARCH_MAX_RADIUS_M;
+  if (population !== null && population >= 20000) return 25000;
+  // Small or remote: the draw is often well outside town.
+  return 50000;
 }

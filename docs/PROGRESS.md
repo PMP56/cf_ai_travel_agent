@@ -113,6 +113,28 @@ Assumptions made while writing these docs — correct any that are wrong.
 
 ## Session log
 
+### 2026-09-26 — Places: three layers of silent data loss
+Chased the missing Uffizi. It was not one bug but three, each hiding the next, and all of the same
+shape: partial results that looked like absence.
+
+1. Tiled searches produced ~1,500 candidates, so 30 pageview batches fired at once and Wikipedia
+   rate-limited them. A throttled batch scored its titles zero, which put them under the notability
+   threshold. Fixed with bounded concurrency (4) and one retry, and by failing loudly when ANY batch
+   is lost rather than only when all are.
+2. The 300-candidate cap sorted by distance, but Florence's centre has 300+ geotagged articles
+   inside 400m — so the cap discarded notable places by proximity. Cities now use a single 10km
+   search (no tiling at all; it added candidates without adding reach) and the cap is 500.
+3. The real one: MediaWiki paginates `prop=pageviews`. On a 50-title batch it returns PARTIAL data
+   plus a `continue` token and no error, so `Uffizi` came back with no pageviews field while its
+   neighbours in the same response had one. Now follows continuation to completion.
+
+All three were the same failure mode the climate tool had: something incomplete presenting as
+something empty. Verified: Florence 5/5 landmarks, Kyoto 4/4, Marrakesh 3/3.
+
+With the tool fixed, `Nintendo` surfaced at 3,352/day in Kyoto (its HQ is geotagged there) — and the
+model filter correctly rejected it, along with Heian-kyo, Kyoto Prefecture and the Medici person.
+That is the two-layer split working as designed.
+
 ### 2026-09-26 — Phase 1: places specialist
 Built the keyless places pipeline and the agent on top of it. Three plan assumptions turned out to
 be wrong and were corrected: REST Countries v5 now needs an API key (so it leaves the keyless
@@ -126,9 +148,8 @@ and has it select BY INDEX, so every name and coordinate still comes from the to
 hallucinated place is structurally impossible. Result for Kyoto: Fushimi Inari, Kiyomizu-dera,
 Kinkaku-ji, Nijo Castle, Gion, Arashiyama — correct, with the noise gone. Florence likewise.
 
-Known gaps: Florence omits the Uffizi and Ponte Vecchio (they did not reach the candidate shortlist
-— worth investigating), remote destinations remain weak because geosearch caps at a 10km radius,
-and the "why" clauses sometimes just restate the place name.
+The Uffizi gap was chased down and fixed — see the next entry. Remote destinations remain weak
+because geosearch caps at a 10km radius, and the "why" clauses sometimes restate the place name.
 
 ### 2026-09-26 — Phase 0 verified end to end
 Ran the agent path against a real model. Intake handled both test messages correctly, including
