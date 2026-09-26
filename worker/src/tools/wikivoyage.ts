@@ -21,6 +21,7 @@ export const USEFUL_SECTIONS = [
   "Stay safe",
   "Respect",
   "Eat",
+  "Drink",
   "Buy",
 ] as const;
 

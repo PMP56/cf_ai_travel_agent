@@ -9,6 +9,7 @@ import { runIntake } from "./agents/intake";
 import { runClimateAgent } from "./agents/climate";
 import { runPlacesAgent } from "./agents/places";
 import { runDestinationAgent } from "./agents/destination";
+import { runFoodAgent } from "./agents/food";
 import { missingBriefFields } from "./schema/trip";
 
 export { UserMemory };
@@ -143,7 +144,7 @@ export default {
 
         // Specialists are independent and grounded — fan them out. Each
         // catches its own failure: no specialist may take down the brief.
-        const [climate, places, destination] = await Promise.all([
+        const [climate, places, destination, food] = await Promise.all([
           place
             ? runClimateAgent(env.AI, brief, place).catch((err) => {
                 console.error("Climate agent failed:", err);
@@ -156,9 +157,13 @@ export default {
                 return [];
               })
             : Promise.resolve([]),
-          // Destination needs no geocode — it works from the name alone.
+          // Destination and food need no geocode — they work from the name alone.
           runDestinationAgent(env.AI, brief).catch((err) => {
             console.error("Destination agent failed:", err);
+            return null;
+          }),
+          runFoodAgent(env.AI, brief).catch((err) => {
+            console.error("Food agent failed:", err);
             return null;
           }),
         ]);
@@ -171,6 +176,7 @@ export default {
             destination,
             climate,
             places,
+            food,
             missing: missingBriefFields(brief),
           },
           200,

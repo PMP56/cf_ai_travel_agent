@@ -8,10 +8,16 @@ travel workspace rather than a chat app. Decisions locked: all Workers AI (zero 
 keyless data sources only, evolve the existing worker on a `v2` branch, MapLibre + OSM for maps.
 Phase 0 has landed the pattern: `schema/`, `tools/`, `agents/` split, JSON Mode via
 `utils/structured.ts`, two keyless tools (geocoding, climate normals) and two agents (intake,
-climate), behind `POST /api/v2/brief`. Phase 1 mostly done. Intake, climate, places and **destination** all verified against a real model;
-three specialists now fan out in parallel. Places produces correct shortlists for Kyoto, Florence
-and Marrakesh with real coordinates throughout. Remaining for Phase 1: a food specialist (the
-Wikivoyage "Eat" section is already fetched, so this is cheap). Then Phase 2's composer and critic.
+climate), behind `POST /api/v2/brief`. **Phase 1 complete.** Intake plus four grounded specialists — destination, climate, places, food —
+all verified against a real model and fanning out in parallel. Places produces correct shortlists for Kyoto, Florence
+and Marrakesh with real coordinates throughout. Next: Phase 2 — the composer (assemble days, cluster
+geographically) and the critic (reject impossible travel times, over-packed days, budget overrun).
+The region-anchor problem below is best tackled alongside the composer, since that is what reveals
+whether a sparse place list actually matters.
+
+**Efficiency note for Phase 2:** the destination and food agents each fetch the same Wikivoyage
+guide independently, so a single brief makes 2-4 redundant calls. Caching guides in a Durable Object
+is the obvious fix and pairs naturally with Workflows.
 
 **Known limitation — remote destinations.** Wikipedia geosearch caps at a 10km radius and tiling
 reaches ~46km, but Perito Moreno Glacier is ~78km from El Calafate, so a Patagonia trip currently
@@ -117,6 +123,22 @@ Assumptions made while writing these docs — correct any that are wrong.
 | 2026-03-18 | (from `4b4f976`) Single-activity replacement sends the whole itinerary to the model | Cheapest way to stop it suggesting an activity already in the plan |
 
 ## Session log
+
+### 2026-09-26 — Food specialist; Phase 1 complete
+Added the food agent over the Wikivoyage Eat/Drink sections. It deliberately does not name
+restaurants: specific venues are the worst thing for an AI planner to invent, and the keyless
+sources cannot support them anyway (OSM gives local-script names with no quality signal). What the
+guides carry reliably is what a place eats and how dining works, which is the more useful half.
+
+First run exposed a truncation bug rather than a model failure. Kyoto returned only "ramen, kaiseki"
+and a blank dietary note for a vegetarian traveller — because the tool truncated sections at 1,200
+chars while Kyoto's Eat section is 4,501, so the model never saw shojin ryori or yatsuhashi at all.
+Its silence was correct for the input it was given. Raising the limit to 4,500 for food (input
+tokens cost a fraction of output) now yields kaiseki, yatsuhashi, matcha ice cream, shojin ryori,
+hamo and tofu, and correctly points a vegetarian at shojin ryori.
+
+Worth remembering: when a grounded agent underperforms, check what it was actually shown before
+touching the prompt.
 
 ### 2026-09-26 — Destination specialist
 Added `tools/wikivoyage.ts` and the destination agent. Uses plain-text extracts rather than
