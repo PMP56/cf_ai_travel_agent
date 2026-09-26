@@ -97,30 +97,42 @@ export default function App() {
 
       {!started ? (
         /* ---- Cold start: one question, centred ---- */
-        <main className="flex-1 grid place-items-center px-6 overflow-y-auto">
-          <div className="w-full max-w-[600px] py-12">
+        <main className="flex-1 overflow-y-auto">
+          <div className="w-full max-w-[860px] mx-auto px-6 pt-[clamp(32px,7vh,72px)] pb-16">
             <p className="eyebrow">Plan a trip</p>
-            <h1 className="display text-[clamp(38px,7vw,68px)] mt-2 mb-3">
+            <h1 className="display text-[clamp(40px,6.5vw,76px)] mt-2 mb-4">
               Every place, verified.
             </h1>
-            <p className="text-[14px] text-ink-soft leading-relaxed mb-7 max-w-[46ch]">
-              Seven agents work in parallel over real sources — Wikipedia, Wikivoyage and
-              the ERA5 climate archive. Nothing in your itinerary is invented, and you can
-              watch each one report as it goes.
+            <p className="text-[15px] text-ink-soft leading-relaxed mb-8 max-w-[52ch]">
+              Seven agents work in parallel over real sources. Nothing in your itinerary is
+              invented — every place carries its coordinates, its photograph and a link to
+              where it came from.
             </p>
-            <PromptBar
-              onSubmit={plan.submit}
-              onCancel={plan.cancel}
-              running={plan.running}
-            />
+
+            <PromptBar onSubmit={plan.submit} onCancel={plan.cancel} running={plan.running} />
+
+            {/* The sources are the product's argument, so they get stated up front. */}
+            <dl className="grid grid-cols-2 sm:grid-cols-4 gap-px mt-10 bg-rule border border-rule rounded-sm overflow-hidden">
+              {[
+                ["Wikipedia", "places, ranked by real pageviews"],
+                ["Wikivoyage", "human-written local guides"],
+                ["ERA5", "five-year climate normals"],
+                ["OpenStreetMap", "the map beneath it all"],
+              ].map(([name, what]) => (
+                <div key={name} className="bg-paper-raised px-3 py-3">
+                  <dt className="text-[13px] font-semibold tracking-tight">{name}</dt>
+                  <dd className="figure text-ink-faint mt-1 leading-relaxed">{what}</dd>
+                </div>
+              ))}
+            </dl>
           </div>
         </main>
       ) : (
         /* ---- Working view ---- */
-        <main className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,440px)]">
+        <main className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(360px,460px)]">
           {/* Dossier column */}
           <div className="min-h-0 overflow-y-auto border-r border-rule">
-            <div className="max-w-[760px] mx-auto px-4 py-4 space-y-4">
+            <div className="max-w-[900px] mx-auto px-5 py-4 space-y-5">
               <PromptBar
                 onSubmit={plan.submit}
                 onCancel={plan.cancel}
@@ -139,7 +151,6 @@ export default function App() {
                   brief={brief}
                   place={place}
                   alternatives={plan.alternatives}
-                  missing={result?.missing ?? []}
                   busy={plan.running}
                   onEdit={(next) => plan.replan(next, place)}
                 />
@@ -169,7 +180,7 @@ export default function App() {
               )}
 
               {result && (
-                <div className="grid sm:grid-cols-2 gap-4">
+                <div className="grid sm:grid-cols-2 gap-3">
                   {result.destination && <DestinationPanel brief={result.destination} />}
                   {result.climate && <ClimatePanel climate={result.climate} />}
                   {result.food && <FoodPanel food={result.food} />}

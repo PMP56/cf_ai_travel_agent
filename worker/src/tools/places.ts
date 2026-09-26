@@ -46,6 +46,10 @@ export interface NotablePlace {
   viewsPerDay: number;
   summary: string;
   url: string;
+  /** Wikipedia's lead image, when it has one. Grounded imagery, same request. */
+  imageUrl: string | null;
+  imageWidth: number | null;
+  imageHeight: number | null;
 }
 
 /**
@@ -300,9 +304,16 @@ async function pageviews(titles: string[]): Promise<Map<string, number>> {
   return views;
 }
 
-/** Step 3 — descriptions for the winners, batched. */
-async function summaries(titles: string[]): Promise<Map<string, string>> {
-  const out = new Map<string, string>();
+interface PageDetail {
+  summary: string;
+  imageUrl: string | null;
+  imageWidth: number | null;
+  imageHeight: number | null;
+}
+
+/** Step 3 — descriptions AND lead images for the winners, in one batch. */
+async function pageDetails(titles: string[]): Promise<Map<string, PageDetail>> {
+  const out = new Map<string, PageDetail>();
 
   // Extracts are cosmetic — a missing summary degrades gracefully.
   const batches = await mapWithConcurrency(
@@ -313,9 +324,11 @@ async function summaries(titles: string[]): Promise<Map<string, string>> {
         () =>
           wikiCallComplete({
             action: "query",
-            prop: "extracts",
+            prop: "extracts|pageimages",
             exintro: "1",
             explaintext: "1",
+            piprop: "thumbnail",
+            pithumbsize: "640",
             titles: group.join("|"),
           }),
         `Extract batch of ${group.length}`
@@ -325,12 +338,22 @@ async function summaries(titles: string[]): Promise<Map<string, string>> {
   for (const pages of batches) {
     if (!pages) continue;
     for (const page of pages.values()) {
-      if (typeof page?.title === "string" && typeof page?.extract === "string") {
+      if (typeof page?.title !== "string") continue;
+
+      let summary = "";
+      if (typeof page.extract === "string") {
         // First two sentences is plenty for a prompt, and keeps output tokens down.
         const trimmed = page.extract.replace(/\s+/g, " ").trim();
-        const cut = trimmed.split(/(?<=[.!?])\s+/).slice(0, 2).join(" ");
-        out.set(page.title, cut.slice(0, 400));
+        summary = trimmed.split(/(?<=[.!?])\s+/).slice(0, 2).join(" ").slice(0, 400);
       }
+
+      const thumb = page.thumbnail;
+      out.set(page.title, {
+        summary,
+        imageUrl: typeof thumb?.source === "string" ? thumb.source : null,
+        imageWidth: typeof thumb?.width === "number" ? thumb.width : null,
+        imageHeight: typeof thumb?.height === "number" ? thumb.height : null,
+      });
     }
   }
 
@@ -412,17 +435,23 @@ async function fetchNotablePlaces(
 
   if (ranked.length === 0) return [];
 
-  const extracts = await summaries(ranked.map((c) => c.title));
+  const details = await pageDetails(ranked.map((c) => c.title));
 
-  return ranked.map((c) => ({
-    title: c.title,
-    latitude: c.lat,
-    longitude: c.lon,
-    distanceM: Math.round(c.dist),
-    viewsPerDay: c.views,
-    summary: extracts.get(c.title) ?? "",
-    url: `https://en.wikipedia.org/wiki/${encodeURIComponent(c.title.replace(/ /g, "_"))}`,
-  }));
+  return ranked.map((c) => {
+    const detail = details.get(c.title);
+    return {
+      title: c.title,
+      latitude: c.lat,
+      longitude: c.lon,
+      distanceM: Math.round(c.dist),
+      viewsPerDay: c.views,
+      summary: detail?.summary ?? "",
+      url: `https://en.wikipedia.org/wiki/${encodeURIComponent(c.title.replace(/ /g, "_"))}`,
+      imageUrl: detail?.imageUrl ?? null,
+      imageWidth: detail?.imageWidth ?? null,
+      imageHeight: detail?.imageHeight ?? null,
+    };
+  });
 }
 
 /**

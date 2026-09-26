@@ -16,7 +16,7 @@
      JetBrains Mono   — measured data. Anything that came from a real source.
    ========================================================================= */
 
-@import url("https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap");
+/* Font faces are linked from index.html — see the note there. */
 
 @theme inline {
   --color-ink: hsl(var(--ink));
@@ -235,4 +235,102 @@ body {
 
 .maplibregl-ctrl-group button + button {
   border-top: 1px solid hsl(var(--rule)) !important;
+}
+
+/* ---- Map pins ----------------------------------------------------------
+   A numbered circle with a pointer beneath it, coloured to match the itinerary
+   card for that day. Plain dots gave no reading order and no link back to the
+   list.
+
+   Deliberately NOT a rotated teardrop: MapLibre writes `transform: translate()`
+   on the marker root to position it, which silently overwrites any rotation set
+   here. Anything transform-based on this element will be clobbered. The pointer
+   is a bordered pseudo-element instead, so nothing depends on transform.
+   ----------------------------------------------------------------------- */
+
+.fg-pin {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--pin);
+  border: 2px solid hsl(var(--paper));
+  box-shadow: 0 1px 5px hsl(var(--ink) / 0.35);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  color: hsl(var(--paper));
+  transition: width 120ms ease, height 120ms ease, font-size 120ms ease;
+}
+
+/* The pointer, anchored below the circle. */
+.fg-pin::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  margin-left: -4px;
+  margin-top: -2px;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 6px solid var(--pin);
+  filter: drop-shadow(0 1px 1px hsl(var(--ink) / 0.3));
+}
+
+.fg-pin > span {
+  line-height: 1;
+  pointer-events: none;
+}
+
+.fg-pin-active {
+  width: 32px;
+  height: 32px;
+  font-size: 13px;
+  z-index: 10;
+}
+
+/* MapLibre's popup, restyled into our own language. */
+.maplibregl-popup-content {
+  padding: 0 !important;
+  border-radius: 3px !important;
+  overflow: hidden;
+  background: hsl(var(--paper-raised)) !important;
+  border: 1px solid hsl(var(--rule)) !important;
+  box-shadow: 0 6px 20px hsl(var(--ink) / 0.18) !important;
+}
+
+.maplibregl-popup-tip {
+  border-top-color: hsl(var(--paper-raised)) !important;
+  border-bottom-color: hsl(var(--paper-raised)) !important;
+}
+
+.fg-popup img {
+  display: block;
+  width: 100%;
+  height: 96px;
+  object-fit: cover;
+}
+
+.fg-popup-body {
+  padding: 7px 10px 9px;
+  font-family: var(--font-sans);
+}
+
+.fg-popup-body strong {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: hsl(var(--ink));
+  line-height: 1.25;
+}
+
+.fg-popup-body span {
+  display: block;
+  margin-top: 2px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: hsl(var(--ink-faint));
 }

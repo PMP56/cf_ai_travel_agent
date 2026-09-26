@@ -23,6 +23,9 @@ const place = (title: string, latitude: number, longitude: number): CuratedPlace
   viewsPerDay: 100,
   summary: "",
   url: `https://en.wikipedia.org/wiki/${title}`,
+  imageUrl: null,
+  imageWidth: null,
+  imageHeight: null,
   category: "landmark",
   why: "",
 });

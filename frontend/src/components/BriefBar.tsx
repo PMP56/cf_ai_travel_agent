@@ -22,24 +22,16 @@ interface BriefBarProps {
   brief: TripBrief;
   place: ResolvedPlace | null;
   alternatives: ResolvedPlace[];
-  missing: string[];
   /** Committing an edit re-plans against the same structured intent. */
   onEdit: (brief: TripBrief) => void;
   /** True while a plan is running; edits are disabled to avoid racing it. */
   busy: boolean;
 }
 
-const LABELS: Record<string, string> = {
-  durationDays: "duration",
-  travelMonth: "month",
-  budget: "budget",
-};
-
 export default function BriefBar({
   brief,
   place,
   alternatives,
-  missing,
   onEdit,
   busy,
 }: BriefBarProps) {
@@ -52,7 +44,7 @@ export default function BriefBar({
     >
       <div className="px-4 py-3 border-b border-rule">
         <span className="eyebrow">Destination</span>
-        <h1 className="display text-[30px] md:text-[38px] mt-1 leading-none">
+        <h1 className="display text-[32px] md:text-[40px] mt-1 leading-none">
           {brief.destination}
         </h1>
         {place && (
@@ -161,12 +153,6 @@ export default function BriefBar({
             </span>
           ))}
         </div>
-      )}
-
-      {missing.length > 0 && (
-        <p className="figure text-ink-faint px-4 pb-3">
-          not stated: {missing.map((m) => LABELS[m] ?? m).join(", ")}
-        </p>
       )}
 
       {alternatives.length > 0 && (

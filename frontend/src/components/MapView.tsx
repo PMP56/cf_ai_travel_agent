@@ -103,25 +103,37 @@ export default function MapView({
     for (const p of places) {
       const day = dayIndexFor(itinerary, p);
 
-      const el = document.createElement("div");
-      el.style.cssText = [
-        "width:13px", "height:13px", "border-radius:50%",
-        `background:${day ? dayColour(day) : "hsl(var(--ink-faint))"}`,
-        "border:2px solid hsl(var(--paper))",
-        "box-shadow:0 0 0 1px hsl(var(--ink) / 0.25)",
-        "cursor:pointer",
-        "transition:transform 140ms ease",
-      ].join(";");
-      el.setAttribute("aria-label", p.title);
-      el.title = day ? `Day ${day} — ${p.title}` : p.title;
+      // A numbered pin rather than a bare dot: the number ties the marker to
+      // its position in the day, and the colour ties it to the itinerary card.
+      const colour = day ? dayColour(day) : "hsl(var(--ink-faint))";
+      const position = day
+        ? (itinerary?.days.find((d) => d.day === day)?.places.findIndex((q) => q.title === p.title) ?? -1) + 1
+        : 0;
 
-      const marker = new Marker({ element: el })
+      const el = document.createElement("div");
+      el.className = "fg-pin";
+      el.style.setProperty("--pin", colour);
+      // Label with the DAY, not the stop index: colour already groups the pins,
+      // and a map full of "1"s reads as noise. The stop order is in the popup.
+      if (day) {
+        const label = document.createElement("span");
+        label.textContent = String(day);
+        el.appendChild(label);
+      }
+      el.setAttribute("role", "img");
+      el.setAttribute("aria-label", day ? `Day ${day}, stop ${position}: ${p.title}` : p.title);
+      el.title = day ? `Day ${day} · stop ${position} — ${p.title}` : p.title;
+
+      const marker = new Marker({ element: el, anchor: "bottom" })
         .setLngLat([p.longitude, p.latitude])
         .setPopup(
-          new Popup({ offset: 14, closeButton: false }).setHTML(
-            `<div style="font-family:Inter,sans-serif;font-size:12px;line-height:1.35;max-width:190px">
-               <strong>${p.title.replace(/</g, "&lt;")}</strong>
-               ${day ? `<br><span style="opacity:.6">Day ${day}</span>` : ""}
+          new Popup({ offset: 18, closeButton: false, maxWidth: "240px" }).setHTML(
+            `<div class="fg-popup">
+               ${p.imageUrl ? `<img src="${p.imageUrl}" alt="" loading="lazy">` : ""}
+               <div class="fg-popup-body">
+                 <strong>${p.title.replace(/</g, "&lt;")}</strong>
+                 ${day ? `<span>Day ${day} · stop ${position}</span>` : ""}
+               </div>
              </div>`
           )
         )
@@ -142,8 +154,8 @@ export default function MapView({
       const el = marker.getElement();
       const day = dayIndexFor(itinerary, places.find((p) => p.title === title)!);
       const dimmed = activeDay !== null && day !== activeDay;
-      el.style.opacity = dimmed ? "0.25" : "1";
-      el.style.transform = hoveredPlace?.title === title ? "scale(1.6)" : "scale(1)";
+      el.style.opacity = dimmed ? "0.3" : "1";
+      el.classList.toggle("fg-pin-active", hoveredPlace?.title === title);
       el.style.zIndex = hoveredPlace?.title === title ? "10" : "1";
     }
   }, [hoveredPlace, activeDay, itinerary, places]);

@@ -1,4 +1,5 @@
 import { useState, type KeyboardEvent } from "react";
+import { ArrowRight, Square } from "lucide-react";
 
 /**
  * A single command line, not a chat log.
@@ -16,10 +17,19 @@ interface PromptBarProps {
   compact?: boolean;
 }
 
+/**
+ * Examples as destination cards rather than long text chips. As chips each one
+ * wrapped onto its own line and read as three paragraphs of grey text; as a row
+ * of cards they give the cold-start screen something to look at and make the
+ * shape of a good request obvious at a glance.
+ */
 const EXAMPLES = [
-  "A relaxed week in Kyoto in April, temples and street food",
-  "5 days in Marrakesh in October, souks and food",
-  "A long weekend in Florence in September, art and architecture",
+  { place: "Kyoto", when: "April · 5 days", hook: "temples and street food",
+    prompt: "A relaxed 5 days in Kyoto in April, temples and street food" },
+  { place: "Marrakesh", when: "October · 5 days", hook: "souks and food",
+    prompt: "5 days in Marrakesh in October, souks and food" },
+  { place: "Florence", when: "September · 3 days", hook: "art and architecture",
+    prompt: "A long weekend in Florence in September, art and architecture" },
 ];
 
 export default function PromptBar({ onSubmit, onCancel, running, compact }: PromptBarProps) {
@@ -59,35 +69,43 @@ export default function PromptBar({ onSubmit, onCancel, running, compact }: Prom
           <button
             type="button"
             onClick={onCancel}
-            className="figure shrink-0 px-2.5 py-1.5 border border-rule-strong rounded-xs hover:border-bad hover:text-bad transition-colors"
+            className="figure shrink-0 flex items-center gap-1.5 px-2.5 py-1.5 border border-rule-strong rounded-xs hover:border-bad hover:text-bad transition-colors"
           >
-            stop
+            <Square className="w-3 h-3" aria-hidden /> stop
           </button>
         ) : (
           <button
             type="button"
             onClick={send}
             disabled={!value.trim()}
-            className="figure shrink-0 px-2.5 py-1.5 bg-ink text-paper rounded-xs disabled:opacity-30 hover:bg-accent transition-colors"
+            className="figure shrink-0 flex items-center gap-1.5 px-3 py-1.5 bg-ink text-paper rounded-xs disabled:opacity-25 hover:bg-accent transition-colors"
           >
-            plan ⏎
+            plan <ArrowRight className="w-3 h-3" aria-hidden />
           </button>
         )}
       </div>
 
       {!compact && !running && (
-        <div className="flex flex-wrap gap-1.5 mt-2">
+        <div className="grid sm:grid-cols-3 gap-2 mt-3">
           {EXAMPLES.map((example) => (
             <button
-              key={example}
+              key={example.place}
               type="button"
               onClick={() => {
-                setValue(example);
-                onSubmit(example);
+                setValue(example.prompt);
+                onSubmit(example.prompt);
               }}
-              className="figure text-left px-2 py-1 border border-rule rounded-xs text-ink-soft hover:border-ink-faint hover:text-ink transition-colors"
+              className="group text-left p-3 border border-rule rounded-sm bg-paper-raised hover:border-ink-faint hover:bg-paper-sunken/50 transition-colors"
             >
-              {example}
+              <div className="flex items-baseline justify-between gap-2">
+                <span className="display text-[19px] leading-none">{example.place}</span>
+                <ArrowRight
+                  className="w-3.5 h-3.5 text-ink-faint opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                  aria-hidden
+                />
+              </div>
+              <span className="figure text-ink-faint block mt-1.5">{example.when}</span>
+              <span className="text-[12.5px] text-ink-soft block mt-0.5">{example.hook}</span>
             </button>
           ))}
         </div>

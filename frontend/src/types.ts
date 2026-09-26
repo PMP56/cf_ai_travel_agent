@@ -88,6 +88,10 @@ export interface CuratedPlace {
   viewsPerDay: number;
   summary: string;
   url: string;
+  /** Wikipedia's lead image, when it has one. */
+  imageUrl: string | null;
+  imageWidth: number | null;
+  imageHeight: number | null;
   category: string;
   why: string;
 }

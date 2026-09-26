@@ -8,7 +8,7 @@ travel workspace rather than a chat app. Decisions locked: all Workers AI (zero 
 keyless data sources only, evolve the existing worker on a `v2` branch, MapLibre + OSM for maps.
 Phase 0 has landed the pattern: `schema/`, `tools/`, `agents/` split, JSON Mode via
 `utils/structured.ts`, two keyless tools (geocoding, climate normals) and two agents (intake,
-climate), behind `POST /api/v2/brief`. **Phase 5 hardening underway** — 73 tests, origin allowlist, per-IP rate limiting.
+climate), behind `POST /api/v2/brief`. **UI reworked against real screenshots.** **Phase 5 hardening underway** — 73 tests, origin allowlist, per-IP rate limiting.
 **Phase 4 (direct manipulation) built.** **Phase 3 (UI) built** — the frontend is rewritten around
 the workspace model. **Phase 2 done**
 apart from Workflows, which is a deliberate decision rather than a task (see below). **Phase 1 complete.** Intake plus four grounded specialists — destination, climate, places, food —
@@ -137,6 +137,37 @@ Assumptions made while writing these docs — correct any that are wrong.
 
 ## Session log
 
+### 2026-09-26 — UI rework, driven by actual screenshots
+Installed Playwright and drove a headless browser so the interface could be looked at rather than
+reasoned about. That immediately found three bugs no amount of code review would have caught.
+
+**The fonts had never loaded.** `@import` for Google Fonts sat inside `index.css` after Tailwind's
+expanded output, and CSS requires `@import` to precede all other statements, so the browser silently
+dropped it — `document.fonts.size` was 0 and everything rendered in Georgia and system-ui. The whole
+typographic direction had never actually been seen. Moved to a `<link>` in index.html with
+preconnect; 44 faces now load.
+
+**Day colours resolved to nothing.** `dayColour()` returned `var(--color-day-N)`, but Tailwind v4's
+`@theme inline` substitutes those values into utilities at build time and never emits them as
+runtime custom properties. Probed it directly: `--color-day-1` was empty and fell back to ink, which
+is why every day badge was a blank circle and every map pin a grey blob. Now references the raw
+`--day-N` properties on `:root`.
+
+**MapLibre owns the marker transform.** The pins were meant to be rotated teardrops, but MapLibre
+writes `transform: translate()` on the marker root to position it, overwriting the rotation — so the
+pin never rotated while its counter-rotating label did, leaving tilted digits. Rebuilt as a circle
+with a bordered pseudo-element pointer, depending on no transform at all.
+
+Beyond the bugs: added Wikipedia lead images to the places tool (same batched call, 9/10 places have
+one), which is what actually fixes "too plain" — the page is now anchored by photographs of real
+places rather than decorated with stock imagery. Day cards replace the flat list, with numbered
+badges colour-matched to the map pins; category icons from lucide; example destinations as cards
+rather than three stacked paragraphs of grey text; sources stated on the cold-start screen; content
+column widened to reclaim ~350px of dead space.
+
+Lesson worth keeping: three of these were invisible in code and obvious in a screenshot. Anything
+visual needs to be looked at before it is called done.
+
 ### 2026-09-26 — Phase 5: tests and hardening
 Added the test suite this project has never had: 57 in the worker (clustering, trip normalisation,
 `parseAiJson`, CORS, rate limiting) and 16 in the frontend (itinerary edits), running in ~150ms
@@ -203,9 +234,7 @@ and labelled controls.
 MapLibre is ~1MB, so it is lazy-loaded — the cold-start screen has no map, and the initial bundle
 went from 353kB gzipped to 67kB.
 
-**Not visually verified.** Build, lint, typecheck, CORS preflight and live SSE parsing are all
-confirmed, and the event shapes match the worker exactly, but no browser was available in this
-session to look at the rendered result. Layout and visual polish need a human pass.
+Superseded — the UI has since been screenshotted and reworked; see the entry above.
 
 ### 2026-09-26 — Progress streaming and caching
 Extracted the pipeline out of the route handler into `pipeline.ts` so one implementation serves both
