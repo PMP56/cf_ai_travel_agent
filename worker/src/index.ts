@@ -7,6 +7,7 @@ import { executeWorkflow, replaceHighlight } from "./workflow";
 import { corsHeaders, jsonResponse, errorResponse } from "./utils/helpers";
 import { runIntake } from "./agents/intake";
 import { runClimateAgent } from "./agents/climate";
+import { runPlacesAgent } from "./agents/places";
 import { missingBriefFields } from "./schema/trip";
 
 export { UserMemory };
@@ -139,8 +140,20 @@ export default {
 
         const { brief, place, alternatives } = await runIntake(env.AI, message);
 
-        // Climate is a grounded specialist: it needs a resolved place and a month.
-        const climate = place ? await runClimateAgent(env.AI, brief, place) : null;
+        // Specialists are independent and grounded — fan them out. Each
+        // catches its own failure: no specialist may take down the brief.
+        const [climate, places] = place
+          ? await Promise.all([
+              runClimateAgent(env.AI, brief, place).catch((err) => {
+                console.error("Climate agent failed:", err);
+                return null;
+              }),
+              runPlacesAgent(env.AI, brief, place).catch((err) => {
+                console.error("Places agent failed:", err);
+                return [];
+              }),
+            ])
+          : [null, []];
 
         return jsonResponse(
           {
@@ -148,6 +161,7 @@ export default {
             place,
             alternatives,
             climate,
+            places,
             missing: missingBriefFields(brief),
           },
           200,

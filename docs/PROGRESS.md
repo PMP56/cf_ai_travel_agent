@@ -8,9 +8,10 @@ travel workspace rather than a chat app. Decisions locked: all Workers AI (zero 
 keyless data sources only, evolve the existing worker on a `v2` branch, MapLibre + OSM for maps.
 Phase 0 has landed the pattern: `schema/`, `tools/`, `agents/` split, JSON Mode via
 `utils/structured.ts`, two keyless tools (geocoding, climate normals) and two agents (intake,
-climate), behind `POST /api/v2/brief`. Verified end to end against a real model via `wrangler dev`: intake extracts all nine fields
-correctly (including leaving unstated ones null), the gateway-city anchor works, and the climate
-agent's advice is calibrated. Next: Phase 1 (destination, places, food specialists).
+climate), behind `POST /api/v2/brief`. Phase 1 underway. Intake, climate and **places** all verified against a real model, and the two
+specialists now fan out in parallel. Places produces genuinely correct shortlists for Kyoto and
+Florence with real coordinates throughout. Next: destination (prose/practical info) and food
+specialists, then Phase 2's composer and critic.
 
 Hygiene pass complete. The Unsplash key has been rotated, the leaked value is dead, and the new one
 is set as a deployed Cloudflare secret. Cloudflare login is active, so `wrangler dev` can now serve
@@ -111,6 +112,23 @@ Assumptions made while writing these docs — correct any that are wrong.
 | 2026-03-18 | (from `4b4f976`) Single-activity replacement sends the whole itinerary to the model | Cheapest way to stop it suggesting an activity already in the plan |
 
 ## Session log
+
+### 2026-09-26 — Phase 1: places specialist
+Built the keyless places pipeline and the agent on top of it. Three plan assumptions turned out to
+be wrong and were corrected: REST Countries v5 now needs an API key (so it leaves the keyless
+stack), Overpass returns local-script names and ranks a records office level with Kinkaku-ji, and
+Wikivoyage listing markup is inconsistent between articles. What works is Wikipedia geosearch ranked
+by pageviews — roughly 100x separation between attractions and noise.
+
+Ranking alone was not enough: it surfaced people, events, artworks, administrative areas and
+neighbouring towns. Rather than grow a blocklist, the agent hands the model the ranked candidates
+and has it select BY INDEX, so every name and coordinate still comes from the tool and a
+hallucinated place is structurally impossible. Result for Kyoto: Fushimi Inari, Kiyomizu-dera,
+Kinkaku-ji, Nijo Castle, Gion, Arashiyama — correct, with the noise gone. Florence likewise.
+
+Known gaps: Florence omits the Uffizi and Ponte Vecchio (they did not reach the candidate shortlist
+— worth investigating), remote destinations remain weak because geosearch caps at a 10km radius,
+and the "why" clauses sometimes just restate the place name.
 
 ### 2026-09-26 — Phase 0 verified end to end
 Ran the agent path against a real model. Intake handled both test messages correctly, including
