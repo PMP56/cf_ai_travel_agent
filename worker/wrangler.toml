@@ -16,4 +16,8 @@ new_sqlite_classes = ["UserMemory"]
 
 [vars]
 ENVIRONMENT = "production"
-UNSPLASH_ACCESS_KEY = "swwZifV2anZemeFKDNWz1qdv_cvR3UuzZP1jLUGXKmA"
+
+# UNSPLASH_ACCESS_KEY is a secret, not a var.
+#   deployed: npx wrangler secret put UNSPLASH_ACCESS_KEY
+#   local:    put it in worker/.dev.vars (gitignored)
+# Without it, /api/generate still works and simply returns no photos.

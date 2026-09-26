@@ -1,0 +1,118 @@
+# Progress
+
+Living status file. Newest session log entry goes on top.
+
+## Current focus
+Hygiene pass complete. The Unsplash key has been rotated, the leaked value is dead, and the new one
+is set as a deployed Cloudflare secret. Cloudflare login is active, so `wrangler dev` can now serve
+`/api/generate` and changes can finally be verified end to end rather than by typecheck alone.
+
+One loose end: `worker/.dev.vars` exists but `UNSPLASH_ACCESS_KEY` is empty, so **local** dev returns
+no photos (it degrades silently — an empty gallery, not an error). Paste the key from
+unsplash.com/oauth/applications to fix. Does not affect the deployed worker.
+
+Next substantive work: backlog #1, retry/degrade on malformed model output.
+
+## Status
+
+**Done and working**
+- `POST /api/generate` — full flow: DO load → plan generation → parallel photos + preference
+  extraction → DO save.
+- `POST /api/replace-highlight` — swaps one activity, told about the rest of the itinerary so it
+  doesn't duplicate.
+- `GET /api/profile/:userId` — implemented and working, despite the README calling it "in progress".
+- Durable Object memory: last 10 extracted preference sentences, last 3 injected into the prompt.
+- Frontend: timeline UI, photo gallery sidebar, dark/light theme, persisted userId, welcome screen.
+- `frontend` lint and build are clean; `worker` typechecks clean.
+
+**In progress / half-done**
+- `UserProfile` is mostly aspirational — `name`, `budget`, `homeCountry`, `travelStyle`, `pastTrips`
+  are declared in `memory/schema.ts` and never written.
+- The markdown-rendering fallback in `MessageContent.tsx` is unreachable in practice: every
+  assistant message after the greeting carries a `plan`.
+
+**Broken / wrong**
+- No error surface for a malformed model response: `parsePlanResponse` throws, the worker returns
+  500, and the UI shows a generic "Sorry, I encountered an error."
+
+## Backlog
+
+Priority order. Prashanna confirmed on 2026-09-26 that this is a portfolio demo *for now* but is
+intended to become a real user-facing app, so the hardening items stay on the list rather than
+being written off — they move up once real users are in scope.
+
+1. **Retry or degrade on bad model output.** One reparse attempt, or return a partial plan, instead
+   of a 500. Currently the only failure mode the user ever sees.
+2. **Deduplicate the plan types.** `worker/src/utils/plan.ts` and `frontend/src/types.ts` are
+   maintained by hand in parallel, and `buildPlanPrompt` describes the same shape a third time.
+3. **Add a check to the worker.** No lint, no tests — at minimum a `"typecheck": "tsc --noEmit"`
+   script in `worker/package.json`, and ideally Vitest over `parsePlanResponse` and the day grouping.
+4. **Move `replaceHighlight`'s inline prompt into `utils/prompts.ts`**, next to `buildPlanPrompt`.
+5. **Pass `userId` to `/api/replace-highlight`.** The worker's request interface declares it, the
+   frontend never sends it, nothing uses it. Wire it up or drop it from the interface.
+6. **Bump `compatibility_date`.** It is `2024-01-01` while the code uses modern `cloudflare:workers`
+   DO imports and SQLite-backed DO classes.
+7. **Upgrade wrangler.** v3.114.15 installed; v4 is current and warns on every invocation.
+
+**Before real users** (deferred by decision, not forgotten):
+
+8. **Tighten CORS.** `corsHeaders` reflects any `Origin`; pin it to the Pages domain and localhost.
+9. **Rate-limit the AI endpoints.** `/api/generate` costs two Workers AI calls per request and is
+    unauthenticated — trivially abusable once public.
+10. **Real user identity.** The `userId` is a client-generated UUID in `localStorage`: memory is
+    per-browser, lost on clear, and spoofable by editing one key.
+11. **Populate `UserProfile`.** `name`, `budget`, `homeCountry`, `travelStyle`, `pastTrips` are
+    declared in `memory/schema.ts` and never written; only the free-text `preferences` list is used.
+
+## Open questions
+
+Assumptions made while writing these docs — correct any that are wrong.
+
+- **Frontend deploy is `wrangler pages deploy dist`.** Inferred from `frontend/.wrangler/` existing
+  and the site being on `pages.dev`. No Pages config or CI is committed, so the actual step is
+  unknown — it may be a Git-connected Pages build.
+- **The markdown fallback in `MessageContent.tsx` is intentional safety, not leftover.** Left in place.
+- **The stray untracked `node_modules/` at the repo root is unrelated junk** (dnd-kit, redux, with no
+  `package.json`). Not touched.
+- **`PROMPTS.md` is a historical record** of the prompts used to scaffold the project, not something
+  the runtime reads.
+
+## Decision log
+
+| Date | Decision | Why |
+| --- | --- | --- |
+| 2026-09-26 | `docs/PROGRESS.md` is the single status file; no separate TODO/STATUS | One place to update at the end of a task |
+| 2026-09-26 | Trust the code over `README.md` wherever they disagree | Five concrete contradictions found; README lagged three rewrites |
+| 2026-09-26 | Unsplash key moved out of `[vars]` to a secret / `.dev.vars` | Stops the leak growing; git history still holds the old value, so rotation was required too |
+| 2026-09-26 | Key rotated by Prashanna and set via `wrangler secret put`; leaked value now dead | Closes the exposure in commit `9440211` — removal from the tree alone would not have |
+| 2026-09-26 | Root `.env` deleted rather than wired up; `.env`/`.env.*` added to `.gitignore` | Nothing reads a root `.env` (Vite reads `frontend/.env`, wrangler reads `worker/.dev.vars`), and it was unignored — one `git add .` from being committed |
+| 2026-09-26 | `UNSPLASH_SECRET_KEY` deliberately not deployed anywhere | Only used for Unsplash OAuth user-auth; this app does public search with `Client-ID` alone |
+| 2026-09-26 | Photos degrade to `[]` when the key is absent rather than erroring | Keeps local dev usable without a key; the guard already existed, the types now match it |
+| 2026-09-26 | Hardening (CORS, rate limits, real identity) kept in the backlog but ranked below correctness | Demo today, real users later — deferred, explicitly not dropped |
+| 2026-09-26 | Prashanna is the sole committer; no attribution trailers, and Claude never runs `git commit` | His instruction, marked very important; enforced by a deny rule in `.claude/settings.json` |
+| 2026-03-18 | (from `5ceade4`) Photos and preference extraction run under `Promise.all` | Independent calls; cuts a round trip off `/api/generate` |
+| 2026-03-18 | (from `4b4f976`) Single-activity replacement sends the whole itinerary to the model | Cheapest way to stop it suggesting an activity already in the plan |
+
+## Session log
+
+### 2026-09-26 — Unsplash key rotation
+Prashanna rotated the key, set it via `npx wrangler secret put UNSPLASH_ACCESS_KEY` (confirmed
+present on the deployed worker) and deleted the root `.env`. Added `.env`/`.env.*` to `.gitignore` —
+the root `.env` had not been ignored — plus `worker/.dev.vars.example`. Cloudflare login now active.
+Backlog item #1 closed. Outstanding: `worker/.dev.vars` still has an empty value, so local dev
+returns no photos.
+
+### 2026-09-26 — Hygiene pass
+Removed `UNSPLASH_ACCESS_KEY` from `wrangler.toml [vars]`; it is now a secret (`.dev.vars` locally)
+and typed optional end to end. Rewrote `README.md` against the actual code — five contradictions
+gone, `/api/replace-highlight` documented, real plan shape shown. Deleted dead code
+(`exxtractDestination.ts` + its import, `Loader.tsx`, `App.css`, `assets/react.svg`) and all four
+debug `console.log`s. Lint, build and typecheck all clean; CSS bundle shrank 0.7 kB because
+Tailwind had been scanning the orphaned `App.css`. **Rotating the key at Unsplash is still to do.**
+
+### 2026-09-26 — Onboarding
+Read the full tree (42 tracked files, ~1,500 lines of TS/TSX), git history, and both configs.
+Verified `frontend` lint + build and `worker` typecheck — all clean; no tests exist anywhere.
+Created `CLAUDE.md`, `docs/ARCHITECTURE.md`, this file, `.claude/settings.json`, and four slash
+commands. No source, config, or data was modified. Flagged a live Unsplash key committed in
+`worker/wrangler.toml`.

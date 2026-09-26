@@ -23,3 +23,15 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Claude Code local overrides
+CLAUDE.local.md
+.claude/settings.local.json
+
+# Cloudflare local secrets
+.dev.vars
+
+# Environment files (never commit)
+.env
+.env.*
+!.env.example

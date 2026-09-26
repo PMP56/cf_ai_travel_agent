@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "allow": [
+      "Bash(npm run lint:*)",
+      "Bash(npm run build:*)",
+      "Bash(npm install)",
+      "Bash(npm ci)",
+      "Bash(npx eslint:*)",
+      "Bash(npx tsc --noEmit:*)",
+      "Bash(npx tsc -b:*)",
+      "Bash(npx vite build:*)",
+      "Bash(npx wrangler --version)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git show:*)",
+      "Bash(git branch:*)",
+      "Bash(git ls-files:*)",
+      "Bash(rg:*)",
+      "Bash(grep:*)",
+      "Bash(find:*)",
+      "Bash(ls:*)",
+      "Bash(cat:*)",
+      "Bash(head:*)",
+      "Bash(tail:*)",
+      "Bash(wc:*)"
+    ],
+    "deny": [
+      "Read(./frontend/.env)",
+      "Read(./frontend/.env.*)",
+      "Read(./**/.dev.vars)",
+      "Read(./**/*.pem)",
+      "Read(./**/*.key)",
+      "Read(./**/.wrangler/state/**)",
+      "Read(./**/node_modules/**)",
+      "Bash(git push:*)",
+      "Bash(gh pr create:*)",
+      "Bash(rm -rf:*)",
+      "Bash(git push --force:*)",
+      "Bash(git push -f:*)",
+      "Bash(git reset --hard:*)",
+      "Bash(git clean:*)",
+      "Bash(npx wrangler deploy:*)",
+      "Bash(npx wrangler delete:*)",
+      "Bash(npx wrangler pages deploy:*)",
+      "Bash(npx wrangler secret delete:*)",
+      "Bash(npm run deploy:*)",
+      "Bash(npm publish:*)"
+    ]
+  }
+}

@@ -69,8 +69,6 @@ export default function MessageContent({ content, plan, isUser, onReplaceHighlig
   async function handleReplace(day: string, currentTitle: string, cardKey: string) {
     if (!onReplaceHighlight || !plan) return;
 
-    console.log("plan.destination:", plan.destination); // ← add this
-
     setReplacingKey(cardKey);
     try {
       const res = await fetch(

@@ -1,7 +1,6 @@
 import { UserProfile } from "./memory/schema";
 import { fetchDestinationPhotos, UnsplashPhoto } from "./utils/photos";
 import { buildPlanPrompt } from "./utils/prompts";
-import { extractDestination } from "./utils/exxtractDestination";
 import { Highlight, TravelPlan } from "./utils/plan";
 
 export interface WorkflowResult {
@@ -66,7 +65,7 @@ export async function executeWorkflow(
   ai: Ai,
   message: string,
   userProfile: UserProfile,
-  unsplashKey: string
+  unsplashKey: string | undefined
 ): Promise<WorkflowResult> {
 
   const planResponse = await ai.run("@cf/meta/llama-3.3-70b-instruct-fp8-fast", {

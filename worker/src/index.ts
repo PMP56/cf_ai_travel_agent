@@ -11,7 +11,7 @@ export { UserMemory };
 interface Env {
   AI: Ai;
   USER_MEMORY: DurableObjectNamespace;
-  UNSPLASH_ACCESS_KEY: string;
+  UNSPLASH_ACCESS_KEY?: string;
 }
 
 interface GenerateRequestBody {
@@ -55,7 +55,7 @@ export default {
           return errorResponse("userId and message are required", 400, origin);
         }
 
-        // Get DO (optional for now)
+        // Load this user's remembered preferences
         const id = env.USER_MEMORY.idFromName(userId);
         const stub = env.USER_MEMORY.get(id);
         const userProfile = await getUserProfile(stub);
@@ -65,12 +65,9 @@ export default {
           env.AI,
           message,
           userProfile,
-          env.UNSPLASH_ACCESS_KEY // ← is this being passed?
+          env.UNSPLASH_ACCESS_KEY
         );
 
-        console.log("Photos", photos)
-
-        // OPTIONAL: If you want to still update memory, uncomment:
         await updateUserProfile(stub, updatedProfile);
 
         return jsonResponse(
@@ -95,9 +92,6 @@ export default {
       try {
         const body = (await request.json()) as Partial<ReplaceHighlightRequestBody>;
         const { destination, day, currentTitle, allHighlights } = body;
-
-        console.log("===============================")
-        console.log(body)
 
         if (!destination || !day || !currentTitle || !allHighlights) {
           return errorResponse("destination, day, currentTitle and allHighlights are required", 400, origin);
