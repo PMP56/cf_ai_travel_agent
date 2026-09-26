@@ -22,7 +22,17 @@ Interpret the numbers for a traveller. Never contradict them and never introduce
 
 - summary: 1-2 sentences on what the weather will actually feel like.
 - packing: 3-5 specific items justified by the data. Cite the reason ("evenings near 8C" not "it may be cool").
-- caution: one sentence on the main weather risk, or "" if the month is genuinely benign.
+- caution: ONE COMPLETE SENTENCE naming the single most notable weather risk AND its figure, then what it means for the traveller.
+  First decide whether ANY figure is actually notable, using these thresholds:
+    high above 30C, or low below 5C
+    rain on more than 40% of days
+    average peak wind above 30km/h
+  Pick the figure that exceeds its threshold by the widest margin. A number below its threshold is
+  ordinary and must NOT be reported as a risk — 15km/h wind is a light breeze, not a hazard.
+  If nothing crosses a threshold, return "" for this field.
+  Good: "Average peak winds of 31km/h gusting to 60km/h will make exposed trails hard going, so plan ridge walks for calmer mornings."
+  Bad: "sustained winds"
+  Bad: "Winds of 15.5km/h will have a moderate impact on outdoor activities."
 - comfortRating: integer 1-5 for sightseeing comfort. 5 = mild and dry, 1 = extreme heat, cold, or near-constant rain.`;
 
 const CLIMATE_JSON_SCHEMA = {
@@ -55,6 +65,8 @@ function describe(n: ClimateNormals, place: string): string {
     `Record low in this month: ${n.recordLowC}C`,
     `Average monthly rainfall: ${n.avgPrecipitationMm}mm`,
     `Share of days with meaningful rain (>1mm): ${rainyPct}%`,
+    `Average daily peak wind: ${n.avgWindKph}km/h`,
+    `Strongest wind recorded in this month: ${n.peakWindKph}km/h`,
   ].join("\n");
 }
 

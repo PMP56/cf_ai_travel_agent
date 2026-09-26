@@ -8,9 +8,9 @@ travel workspace rather than a chat app. Decisions locked: all Workers AI (zero 
 keyless data sources only, evolve the existing worker on a `v2` branch, MapLibre + OSM for maps.
 Phase 0 has landed the pattern: `schema/`, `tools/`, `agents/` split, JSON Mode via
 `utils/structured.ts`, two keyless tools (geocoding, climate normals) and two agents (intake,
-climate), behind `POST /api/v2/brief`. The tools are verified against the live APIs; **the two
-agents have not yet run against a real model** — that needs `wrangler dev`. Next: verify the agent
-path end to end, then Phase 1 (destination, places, food specialists).
+climate), behind `POST /api/v2/brief`. Verified end to end against a real model via `wrangler dev`: intake extracts all nine fields
+correctly (including leaving unstated ones null), the gateway-city anchor works, and the climate
+agent's advice is calibrated. Next: Phase 1 (destination, places, food specialists).
 
 Hygiene pass complete. The Unsplash key has been rotated, the leaked value is dead, and the new one
 is set as a deployed Cloudflare secret. Cloudflare login is active, so `wrangler dev` can now serve
@@ -109,6 +109,20 @@ Assumptions made while writing these docs — correct any that are wrong.
 | 2026-03-18 | (from `4b4f976`) Single-activity replacement sends the whole itinerary to the model | Cheapest way to stop it suggesting an activity already in the plan |
 
 ## Session log
+
+### 2026-09-26 — Phase 0 verified end to end
+Ran the agent path against a real model. Intake handled both test messages correctly, including
+leaving `pace`, `budget` and `partySize` null when unstated rather than inventing them, and
+`Patagonia -> El Calafate` confirmed the gateway anchor works with a live model.
+
+Two climate-agent quality fixes came out of it. The tool fetched no wind, so for Patagonia — where
+December averages 31km/h peak winds gusting to 60 — the advice was silently missing the thing that
+actually defines the place; wind now comes from the same request at no extra cost. Then the caution
+field needed three prompt iterations: first a redundant restatement of the summary, then a bare
+fragment ("sustained winds"), then over-reporting 15km/h in Kyoto as a hazard. It is now
+threshold-based (>30C, <5C, >40% wet days, >30km/h wind) and picks whichever figure exceeds its
+threshold by the widest margin. Verified across three climates: Kyoto April stays correctly silent,
+Patagonia picks wind, Marrakesh July picks the 40.1C heat over its wind.
 
 ### 2026-09-26 — Phase 0 (branch `v2`)
 Built the v2 skeleton: `schema/trip.ts` (TripBrief + flat JSON Schema), `tools/` (geocode, climate

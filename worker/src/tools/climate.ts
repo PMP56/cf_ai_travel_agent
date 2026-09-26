@@ -29,6 +29,9 @@ export interface ClimateNormals {
   rainyDayFraction: number;
   recordHighC: number;
   recordLowC: number;
+  /** Mean of daily max wind, km/h. In places like Patagonia this is the story. */
+  avgWindKph: number;
+  peakWindKph: number;
 }
 
 /** Every month's normals from a single fetch, keyed by month name. */
@@ -57,6 +60,7 @@ const round1 = (n: number) => Math.round(n * 10) / 10;
 interface MonthBucket {
   highs: number[];
   lows: number[];
+  winds: number[];
   precipByYear: Map<number, number[]>;
 }
 
@@ -78,7 +82,7 @@ export async function getClimateYear(
   const url =
     `${ARCHIVE_URL}?latitude=${latitude}&longitude=${longitude}` +
     `&start_date=${firstYear}-01-01&end_date=${lastCompleteYear}-12-31` +
-    `&daily=temperature_2m_max,temperature_2m_min,precipitation_sum` +
+    `&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,wind_speed_10m_max` +
     `&timezone=${encodeURIComponent(timezone)}`;
 
   let res: Response;
@@ -101,6 +105,7 @@ export async function getClimateYear(
       temperature_2m_max?: unknown;
       temperature_2m_min?: unknown;
       precipitation_sum?: unknown;
+      wind_speed_10m_max?: unknown;
     };
   };
 
@@ -108,6 +113,7 @@ export async function getClimateYear(
   const maxima = data?.daily?.temperature_2m_max;
   const minima = data?.daily?.temperature_2m_min;
   const precip = data?.daily?.precipitation_sum;
+  const wind = data?.daily?.wind_speed_10m_max;
 
   if (!Array.isArray(time) || !Array.isArray(maxima) || !Array.isArray(minima)) {
     throw new ClimateFetchError("archive returned no daily series");
@@ -130,12 +136,15 @@ export async function getClimateYear(
 
     let bucket = buckets.get(month);
     if (!bucket) {
-      bucket = { highs: [], lows: [], precipByYear: new Map() };
+      bucket = { highs: [], lows: [], winds: [], precipByYear: new Map() };
       buckets.set(month, bucket);
     }
 
     bucket.highs.push(high);
     bucket.lows.push(low);
+
+    const kph = Array.isArray(wind) ? wind[i] : undefined;
+    if (typeof kph === "number" && Number.isFinite(kph)) bucket.winds.push(kph);
 
     const mm = Array.isArray(precip) ? precip[i] : undefined;
     if (typeof mm === "number" && Number.isFinite(mm)) {
@@ -172,6 +181,8 @@ export async function getClimateYear(
       rainyDayFraction: totalDays ? Math.round((rainyDays / totalDays) * 100) / 100 : 0,
       recordHighC: round1(Math.max(...bucket.highs)),
       recordLowC: round1(Math.min(...bucket.lows)),
+      avgWindKph: bucket.winds.length ? round1(mean(bucket.winds)) : 0,
+      peakWindKph: bucket.winds.length ? round1(Math.max(...bucket.winds)) : 0,
     };
   }
 
