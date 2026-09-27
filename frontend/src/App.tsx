@@ -48,7 +48,18 @@ function useTheme() {
   });
 
   useEffect(() => {
-    document.documentElement.classList.toggle("dark", dark);
+    const root = document.documentElement;
+    // Suppress transitions across the whole document for the duration of the
+    // swap. Without this the theme arrives in two waves: anything carrying
+    // `transition-colors` — the prompt shell, the example tiles — eases over
+    // 150ms while the page behind them flips instantly. Forcing a reflow while
+    // transitions are off commits the new colours, so re-enabling them a line
+    // later animates nothing.
+    root.classList.add("theme-switching");
+    root.classList.toggle("dark", dark);
+    void root.offsetHeight;
+    root.classList.remove("theme-switching");
+
     try {
       localStorage.setItem("theme", dark ? "dark" : "light");
     } catch {
@@ -122,11 +133,14 @@ export default function App() {
   return (
     <div className="h-dvh flex flex-col bg-paper text-ink overflow-hidden">
       {/* ---- Masthead ---- */}
-      <header className="flex items-center justify-between px-4 h-12 border-b border-rule-strong shrink-0">
-        <div className="flex items-baseline gap-2.5">
-          <span className="display text-[19px]">Field Guide</span>
-          <span className="eyebrow hidden sm:inline">grounded trip planning</span>
-        </div>
+      <header className="flex items-center gap-3 px-4 h-12 border-b border-rule-strong shrink-0">
+        <span className="display text-[19px] shrink-0">Travel Agent</span>
+        {/* flex-1 stays even when the text is hidden, so the tagline keeps its
+            place between the title and the toggle instead of the toggle
+            sliding left on a narrow screen. */}
+        <span className="eyebrow flex-1 text-center">
+          <span className="hidden sm:inline">AI Assisted Trip Planning</span>
+        </span>
 
         <button
           type="button"

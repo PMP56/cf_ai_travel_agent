@@ -539,3 +539,14 @@ select optgroup {
   border-color: hsl(var(--ink));
   box-shadow: 0 0 0 3px hsl(var(--ink) / 0.16);
 }
+
+/* Theme changes must land everywhere at once. Anything with `transition-colors`
+   would otherwise ease over its own duration while untransitioned elements flip
+   instantly, so the switch arrives in two visible waves. App.tsx adds this class,
+   flips `.dark`, forces a reflow and removes it again. */
+.theme-switching,
+.theme-switching *,
+.theme-switching *::before,
+.theme-switching *::after {
+  transition: none !important;
+}

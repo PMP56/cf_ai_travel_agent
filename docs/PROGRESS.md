@@ -138,6 +138,30 @@ Assumptions made while writing these docs — correct any that are wrong.
 
 ## Session log
 
+### 2026-09-27 — Renamed to Travel Agent; theme switch now lands in one wave
+Three changes.
+
+**The app is called Travel Agent.** Renamed in the masthead, `index.html`'s `<title>` and the
+README heading and image alt; a grep across tsx/html/md/json/toml confirms no stale "Field Guide"
+outside this log.
+
+**The tagline is "AI Assisted Trip Planning"**, centred between the title and the theme toggle. The
+header is now three flex children with the tagline taking `flex-1 text-center`, which centres it in
+the space *between* the two rather than against the page. The `flex-1` span stays in the tree at
+narrow widths with only its text hidden, so the toggle does not slide left when the tagline drops
+out. Measured: tagline centre 772px against a title/button midpoint of 772px — exact.
+
+**Theme changes now arrive all at once.** They were landing in two waves: anything carrying
+`transition-colors` — the prompt shell, the example tiles — eased over its 150ms while the rest of
+the page flipped instantly. `useTheme` now adds a `theme-switching` class that kills transitions
+document-wide, flips `.dark`, forces a reflow to commit the new colours while transitions are off,
+and removes the class again; re-enabling transitions then animates nothing. Verified by sampling
+seven elements (body, heading, prompt shell background and border, a card, the header rule and the
+animation layer) on each of the six frames after the click: every frame already matches the settled
+state, so nothing lags.
+
+Lint, 25 tests and build clean.
+
 ### 2026-09-27 — Prompt emphasis, shell focus ring, fainter animation
 Three changes to the cold-start screen.
 

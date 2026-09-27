@@ -1,6 +1,6 @@
-# Field Guide
+# Travel Agent
 
-![Field Guide](travel-agent.png)
+![Travel Agent](travel-agent.png)
 
 A travel planner where **nothing is invented**. Seven agents run over real sources — Wikipedia,
 Wikivoyage and the ECMWF ERA5 climate archive — and every place in the resulting itinerary carries
