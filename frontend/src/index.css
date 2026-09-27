@@ -376,15 +376,32 @@ select optgroup {
   box-shadow: 0 2px 4px hsl(var(--ink) / 0.06), 0 10px 28px hsl(var(--ink) / 0.16) !important;
 }
 
-/* All four sides, because MapLibre colours a different border depending on
-   which anchor it picked. The tip matches the body fill rather than the border:
-   tinting it the border colour turns it into a contrasting nub hanging off the
-   corner, which is very obvious in dark mode. */
-.maplibregl-popup-tip {
-  border-top-color: hsl(var(--paper-raised)) !important;
+/* The tip is a CSS border-triangle: `border: 10px solid transparent`, with each
+   anchor rule switching one side off and colouring the opposite one. Colouring
+   all four sides at once — which an earlier attempt did, to cover every anchor
+   in one rule — fills the square in and the triangle disappears entirely.
+   So: colour exactly the side MapLibre colours, per anchor.
+
+   Body fill rather than border colour, because tinting the tip to match the
+   border turns it into a contrasting nub hanging off the corner. */
+.maplibregl-popup-anchor-top .maplibregl-popup-tip,
+.maplibregl-popup-anchor-top-left .maplibregl-popup-tip,
+.maplibregl-popup-anchor-top-right .maplibregl-popup-tip {
   border-bottom-color: hsl(var(--paper-raised)) !important;
-  border-left-color: hsl(var(--paper-raised)) !important;
+}
+
+.maplibregl-popup-anchor-bottom .maplibregl-popup-tip,
+.maplibregl-popup-anchor-bottom-left .maplibregl-popup-tip,
+.maplibregl-popup-anchor-bottom-right .maplibregl-popup-tip {
+  border-top-color: hsl(var(--paper-raised)) !important;
+}
+
+.maplibregl-popup-anchor-left .maplibregl-popup-tip {
   border-right-color: hsl(var(--paper-raised)) !important;
+}
+
+.maplibregl-popup-anchor-right .maplibregl-popup-tip {
+  border-left-color: hsl(var(--paper-raised)) !important;
 }
 
 .fg-popup img {

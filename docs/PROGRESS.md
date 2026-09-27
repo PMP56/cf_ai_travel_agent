@@ -138,6 +138,27 @@ Assumptions made while writing these docs — correct any that are wrong.
 
 ## Session log
 
+### 2026-09-27 — Restore the popup tip (a self-inflicted regression)
+The previous entry's tip fix removed the tip altogether. Worth writing down because the mistake was
+reasonable and wrong.
+
+MapLibre builds the tip as a CSS border-triangle: the base rule is `border: 10px solid transparent`,
+and each anchor rule switches one side off (`border-<side>-style: none`) and colours the opposite
+one. Setting all four `border-*-color` values — done deliberately, to cover every anchor in a single
+rule — fills the square in, and a square the same colour as the popup body is invisible. The tip did
+not move or break; it stopped being a triangle.
+
+The fix is to colour exactly the side MapLibre colours, per anchor: `border-bottom-color` for the
+three top-* anchors, `border-top-color` for the three bottom-* ones, and the mirrored side for
+`anchor-left` / `anchor-right`. Read out of the live CSSOM rather than guessed.
+
+Verified by cycling every pin and recording, for each anchor that occurred, which tip sides are
+actually painted — counting a side as painted only when its style is not `none` *and* its colour is
+not transparent. Four anchors turned up naturally (top, top-left, top-right, bottom) and each paints
+exactly one side. Checked in both themes.
+
+Lint, 25 tests and build clean.
+
 ### 2026-09-27 — Map popup in the house style, and the details panel slides
 Three fixes.
 
