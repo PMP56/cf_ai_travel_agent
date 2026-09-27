@@ -35,3 +35,6 @@ CLAUDE.local.md
 .env
 .env.*
 !.env.example
+# .env.production holds only the public API URL and IS committed, so a clean
+# checkout builds a deployable bundle without anyone remembering to edit .env.
+!.env.production

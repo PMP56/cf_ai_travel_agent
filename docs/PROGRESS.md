@@ -138,6 +138,18 @@ Assumptions made while writing these docs — correct any that are wrong.
 
 ## Session log
 
+### 2026-09-27 — Live site was calling localhost; fixed the cause
+The deployed bundle had `http://localhost:8787` baked in, so every visitor's browser tried to reach
+their own machine. Caused by bad advice from me: I said `frontend/.env` already pointed at the
+worker when only the **commented** line did, and Vite bakes the active value in at build time.
+
+Fixed structurally rather than by editing the line. `frontend/.env.production` (committed — it holds
+only a public URL) now carries the deployed endpoint, and Vite prefers mode-specific env files, so
+`npm run build` cannot pick up the dev value. `frontend/.env` stays gitignored and points at
+localhost for `npm run dev`. Verified: a fresh build bakes in the workers.dev URL.
+
+Requires a Pages redeploy to take effect.
+
 ### 2026-09-27 — The brief reads as editable
 Feedback: the brief looked like an information dashboard, not something you could change. Correct —
 the affordance only appeared on hover, so at rest the values were indistinguishable from the

@@ -77,7 +77,11 @@ Unverified (need a Cloudflare login / network; ask before running):
 - Partial results that look like empty ones have caused four separate bugs here (rate-limited
   batches, a distance cap, MediaWiki `continue` pagination, section truncation). When a grounded
   agent underperforms, check what it was actually *shown* before touching the prompt.
-- `frontend/.env` sets `VITE_API_ENDPOINT`; Vite reads it only at start — restart after editing.
+- **Two env files, on purpose.** `frontend/.env` (gitignored) points at localhost for `npm run dev`;
+  `frontend/.env.production` (committed, public URL only) is what `npm run build` uses. Vite prefers
+  the mode-specific file, so a build cannot ship the dev URL — which happened once, putting
+  `http://localhost:8787` into the deployed bundle so every visitor called their own machine.
+  Vite reads env only at start — restart after editing.
 - The repo root has a stray untracked `node_modules/` with no `package.json`. Ignore it.
 
 ## Rules
