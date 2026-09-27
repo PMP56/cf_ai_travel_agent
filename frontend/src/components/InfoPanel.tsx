@@ -65,7 +65,7 @@ export default function InfoPanel({
   return (
     <aside
       aria-label="Details"
-      className="hidden lg:flex flex-col min-h-0 w-[340px] xl:w-[380px] shrink-0 border-r border-rule bg-paper-raised"
+      className="hidden lg:flex flex-col min-h-0 w-[380px] xl:w-[420px] shrink-0 border-r border-rule bg-paper-raised"
     >
       <header className="flex items-center gap-2 px-3 h-10 border-b border-rule shrink-0">
         <Info className="w-3.5 h-3.5 text-ink-faint shrink-0" strokeWidth={1.75} aria-hidden />
@@ -85,10 +85,16 @@ export default function InfoPanel({
       {selectedPlace ? (
         <PlaceDetail place={selectedPlace} itinerary={itinerary} onBack={onClearSelection} />
       ) : (
-        <div className="min-h-0 overflow-y-auto p-3 space-y-3">
-          {result?.destination && <DestinationPanel brief={result.destination} />}
+        <div className="min-h-0 overflow-y-auto px-3.5 py-3 divide-y divide-rule">
+          {result?.destination && (
+            <div className="pb-4">
+              <DestinationPanel brief={result.destination} flat />
+            </div>
+          )}
           {result?.climate && (
-            <ClimatePanel climate={result.climate} onPickMonth={onPickMonth} />
+            <div className="pt-4">
+              <ClimatePanel climate={result.climate} onPickMonth={onPickMonth} flat />
+            </div>
           )}
           {!result?.destination && !result?.climate && (
             <p className="figure text-ink-faint">

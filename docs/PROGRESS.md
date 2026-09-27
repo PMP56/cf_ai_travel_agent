@@ -138,6 +138,21 @@ Assumptions made while writing these docs — correct any that are wrong.
 
 ## Session log
 
+### 2026-09-27 — Details panel polish
+Three fixes from review of the new column.
+
+The context and map columns were 380/420 and 420/460, close enough to look like a mistake rather
+than a choice. Both are now 380px, 420 at xl — verified by measuring the rendered widths, not by eye.
+
+The panels nested a card inside a card: the details column already draws a border and a background,
+and `DestinationPanel` / `ClimatePanel` each drew their own on top. `Panel` gained a `flat` variant
+that drops the chrome, and inside the column the sections are separated by rules instead. The same
+components keep their card when they stand alone in the main column below `lg`.
+
+The itinerary tiles lost the Wikipedia link icon and the pageview figure. Both were duplicating what
+the details panel now shows, and the tile reads better as title, reason, category and distance —
+provenance belongs in the dossier, not on every row.
+
 ### 2026-09-27 — Third column: a details panel
 Added a collapsible middle column between the plan and the map, so the reading order is now
 *what* (itinerary) → *about what* (details) → *where* (map). "The place" and the weather moved into

@@ -14,7 +14,6 @@ import {
   Hourglass,
   Repeat2,
   X,
-  ExternalLink,
 } from "lucide-react";
 import type { CuratedPlace, Itinerary } from "../types";
 import { dayColour } from "../dayColour";
@@ -150,7 +149,7 @@ function PlaceRow(props: {
         <PlaceThumb place={place} />
 
         <div className="min-w-0 flex-1">
-          <div className="flex items-start justify-between gap-2">
+          <div className="flex items-start gap-2">
             <button
               type="button"
               onClick={() => onSelect(place)}
@@ -161,23 +160,6 @@ function PlaceRow(props: {
             >
               {place.title}
             </button>
-            <a
-              href={place.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={(e) => e.stopPropagation()}
-              aria-label={`${place.title} on Wikipedia`}
-              title="Open on Wikipedia"
-              className="shrink-0 text-ink-faint hover:text-accent transition-colors mt-0.5"
-            >
-              <ExternalLink className="w-3 h-3" aria-hidden />
-            </a>
-            <span
-              className="figure text-ink-faint shrink-0 pt-0.5"
-              title="average Wikipedia pageviews per day — how this place earned its slot"
-            >
-              {place.viewsPerDay.toLocaleString()}
-            </span>
           </div>
 
           {place.why && (

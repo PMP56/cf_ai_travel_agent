@@ -38,6 +38,12 @@ const MONTHS_FULL = [
   "July", "August", "September", "October", "November", "December",
 ];
 
+/**
+ * `flat` drops the card chrome. Inside the details column the surrounding panel
+ * already provides a border and a background, so a bordered card within it
+ * reads as a box inside a box; there the sections are separated by rules
+ * instead. In the main column, where they stand alone, they keep the card.
+ */
 function Panel({
   icon: Icon,
   label,
@@ -45,6 +51,7 @@ function Panel({
   href,
   children,
   className = "",
+  flat = false,
 }: {
   icon: typeof BookOpen;
   label: string;
@@ -52,10 +59,19 @@ function Panel({
   href?: string;
   children: React.ReactNode;
   className?: string;
+  flat?: boolean;
 }) {
   return (
-    <section className={`border border-rule bg-paper-raised rounded-sm flex flex-col ${className}`}>
-      <header className="flex items-center gap-2 px-3.5 py-2 border-b border-rule">
+    <section
+      className={`flex flex-col ${
+        flat ? "" : "border border-rule bg-paper-raised rounded-sm"
+      } ${className}`}
+    >
+      <header
+        className={`flex items-center gap-2 ${
+          flat ? "px-0 pb-2" : "px-3.5 py-2 border-b border-rule"
+        }`}
+      >
         <Icon className="w-3.5 h-3.5 text-ink-faint shrink-0" strokeWidth={1.75} aria-hidden />
         <h3 className="eyebrow flex-1">{label}</h3>
         {source &&
@@ -73,7 +89,7 @@ function Panel({
             <span className="figure text-ink-faint">{source}</span>
           ))}
       </header>
-      <div className="px-3.5 py-3 flex-1">{children}</div>
+      <div className={`flex-1 ${flat ? "px-0" : "px-3.5 py-3"}`}>{children}</div>
     </section>
   );
 }
@@ -102,9 +118,9 @@ function Callout({
   );
 }
 
-export function DestinationPanel({ brief }: { brief: DestinationBrief }) {
+export function DestinationPanel({ brief , flat }: { flat?: boolean; brief: DestinationBrief }) {
   return (
-    <Panel icon={BookOpen} label="The place" source={brief.source.title} href={brief.source.url}>
+    <Panel icon={BookOpen} label="The place" source={brief.source.title} href={brief.source.url} flat={flat}>
       <p className="text-[13.5px] leading-relaxed">{brief.overview}</p>
 
       {brief.gettingAround && (
@@ -243,9 +259,11 @@ function ClimateChart({
 export function ClimatePanel({
   climate,
   onPickMonth,
+  flat,
 }: {
   climate: ClimateGuidance;
   onPickMonth?: (month: string) => void;
+  flat?: boolean;
 }) {
   const n = climate.normals;
   const rainPct = Math.round(n.rainyDayFraction * 100);
@@ -255,6 +273,7 @@ export function ClimatePanel({
       icon={Thermometer}
       label={`${n.month} weather`}
       source={`ERA5 · ${n.yearsSampled}yr mean`}
+      flat={flat}
     >
       {/* The three figures that change what you pack and when you go. */}
       <div className="grid grid-cols-3 gap-px bg-rule border border-rule rounded-sm overflow-hidden mb-3">
@@ -305,13 +324,14 @@ export function ClimatePanel({
   );
 }
 
-export function FoodPanel({ food }: { food: FoodBrief }) {
+export function FoodPanel({ food , flat }: { flat?: boolean; food: FoodBrief }) {
   return (
     <Panel
       icon={UtensilsCrossed}
       label="Eating"
       source={food.source.title}
       href={food.source.url}
+      flat={flat}
     >
       {food.dishes.length > 0 && (
         <ul className="flex flex-wrap gap-1.5">
@@ -345,7 +365,7 @@ const CHECKS = [
   "order within each day",
 ];
 
-export function CritiquePanel({ critique }: { critique: Critique }) {
+export function CritiquePanel({ critique , flat }: { flat?: boolean; critique: Critique }) {
   const blocking = critique.defects.filter((d) => d.severity === "blocking").length;
 
   return (
@@ -353,6 +373,7 @@ export function CritiquePanel({ critique }: { critique: Critique }) {
       icon={ShieldCheck}
       label="Review"
       source={critique.approved ? "passed" : `${blocking} blocking`}
+      flat={flat}
     >
       {critique.defects.length === 0 ? (
         <>
