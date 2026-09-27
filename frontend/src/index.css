@@ -360,6 +360,12 @@ select optgroup {
 }
 
 /* MapLibre's popup, restyled into our own language. */
+/* Markers carry an explicit z-index — 1 normally, 10 while active — so the
+   popup needs one above both or it renders underneath the pins around it. */
+.maplibregl-popup {
+  z-index: 20;
+}
+
 .maplibregl-popup-content {
   padding: 0 !important;
   border-radius: 3px !important;

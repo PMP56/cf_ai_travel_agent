@@ -138,6 +138,26 @@ Assumptions made while writing these docs — correct any that are wrong.
 
 ## Session log
 
+### 2026-09-27 — Map popup now stacks above the pins
+The popup rendered beneath surrounding markers. The markers carry an explicit `z-index` — 1
+normally, 10 while active — and the popup carried none, so any positioned marker outranked it.
+`.maplibregl-popup` now takes `z-index: 20`. Both sit in the same stacking context: the marker's
+`.maplibregl-canvas-container` parent is `position: static` with `z-index: auto` and so creates
+none, and neither does the map container above it.
+
+**Two false readings on the way, both worth remembering.** `document.elementFromPoint` reported the
+pin on top even after the fix — `.maplibregl-popup` is `pointer-events: none` with only its inner
+content interactive, so hit-testing skips the wrapper entirely. It measures pointer behaviour, not
+paint order, and is the wrong probe for a z-index question.
+
+The proof arrived by accident instead: a Playwright click on a neighbouring pin *failed*, with
+"the popup subtree intercepts pointer events" — the browser's own hit-testing confirming the popup
+now sits above the pin, where before the click would have landed. A screenshot of Ryōan-ji's popup
+then showed the two pins it covers, one clipped to a sliver at the popup edge and one hidden
+outright.
+
+Lint, 25 tests and build clean.
+
 ### 2026-09-27 — Map: quiet attribution, hover popups, pin click opens the dossier
 Three changes to the map.
 
