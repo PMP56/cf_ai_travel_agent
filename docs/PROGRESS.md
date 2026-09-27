@@ -138,6 +138,19 @@ Assumptions made while writing these docs — correct any that are wrong.
 
 ## Session log
 
+### 2026-09-27 — Centre the home page content block
+Removing the source tiles left the content top-aligned with a large void beneath it. The block is
+now vertically centred in the space between the masthead and the animation: 156px of breathing
+room above and below at 1512×1000, 45px at 1440×720.
+
+Done with `justify-content: safe center` rather than plain centring, which matters. A centred flex
+item that outgrows its container overflows in *both* directions, so its top slides above the
+scroll origin and becomes unreachable even with `overflow-y-auto`. The `safe` keyword falls back to
+start-alignment exactly when that would happen. Confirmed: at 390×844 and 360×640 the block sits at
+the top and scrolls normally with nothing clipped, while the desktop sizes centre properly.
+
+Horizontal centring and the left-aligned text inside the block are unchanged.
+
 ### 2026-09-27 — Homepage trim and animation polish
 Six requested changes, all verified by measurement and screenshot rather than by eye alone.
 
