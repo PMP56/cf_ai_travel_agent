@@ -72,6 +72,11 @@ Unverified (need a Cloudflare login / network; ask before running):
   blanked every day badge and map pin once already — see `src/dayColour.ts`.
 - **Fonts are linked from `index.html`, not imported in CSS.** An `@import` inside `index.css` lands
   after Tailwind's output and CSS requires `@import` to come first, so the browser drops it.
+- **Layout differs by breakpoint in JS, not just CSS.** `useMediaQuery(DESKTOP_QUERY)` decides where
+  the map and the place detail *render*, because hiding a duplicate with `lg:hidden` would build two
+  WebGL contexts, and the detail is a column on desktop but a sheet on mobile — different parents.
+  Desktop is three columns; below `lg` everything stacks, the map goes inline above the itinerary,
+  and the pipeline collapses into a `<details>` once the run finishes.
 - **Native controls need `color-scheme`, not CSS.** Select popups, scrollbars and form widgets are
   painted by the browser and never see our variables — `:root` / `:root.dark` set `color-scheme`,
   which is what makes dropdowns readable in dark mode. MapLibre's zoom glyphs are hard-coded dark

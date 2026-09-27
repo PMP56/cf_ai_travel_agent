@@ -1,5 +1,6 @@
 import { Suspense, lazy, useEffect, useState } from "react";
-import { TriangleAlert, Eye } from "lucide-react";
+import { TriangleAlert, Eye, X } from "lucide-react";
+import { useMediaQuery, DESKTOP_QUERY } from "./useMediaQuery";
 import { usePlanStream } from "./usePlanStream";
 import type { CuratedPlace, Itinerary } from "./types";
 import {
@@ -15,6 +16,7 @@ import ItineraryView from "./components/ItineraryView";
 // MapLibre is ~900kB of the bundle and the cold-start screen never shows a
 // map, so it loads only once a destination has been resolved.
 const MapView = lazy(() => import("./components/MapView"));
+const PlaceDetail = lazy(() => import("./components/PlaceDetail"));
 import PromptBar from "./components/PromptBar";
 import {
   CritiquePanel,
@@ -58,6 +60,10 @@ function useTheme() {
 
 export default function App() {
   const plan = usePlanStream();
+  // Drives which layout is live, not merely which is visible — the map is a GL
+  // context and must exist once, and place detail is a column on desktop but a
+  // drawer on mobile.
+  const isDesktop = useMediaQuery(DESKTOP_QUERY);
   const [dark, setDark] = useTheme();
   const [hoveredPlace, setHoveredPlace] = useState<CuratedPlace | null>(null);
   const [activeDay, setActiveDay] = useState<number | null>(null);
@@ -228,14 +234,42 @@ export default function App() {
                 />
               )}
 
-              {/* Telemetry sits inline on narrow screens, in the rail on wide ones. */}
-              <div className="lg:hidden">
-                <AgentRail
-                  agents={plan.agents}
-                  running={plan.running}
-                  elapsedMs={plan.elapsedMs}
-                />
-              </div>
+              {/* Telemetry sits inline on narrow screens, in the rail on wide
+                  ones. Once the run finishes it collapses: seven completed rows
+                  above the itinerary is a lot of scrolling on a phone. */}
+              {(plan.running || !result) && (
+                <div className="lg:hidden">
+                  <AgentRail
+                    agents={plan.agents}
+                    running={plan.running}
+                    elapsedMs={plan.elapsedMs}
+                  />
+                </div>
+              )}
+
+              {/* Below lg there is no map column, and a trip planner without a
+                  map is missing half the point — so it renders inline here
+                  instead, at a height that is usable without swallowing the
+                  screen. Only one instance exists either way. */}
+              {place && !isDesktop && (
+                <div className="lg:hidden h-[260px] rounded-sm overflow-hidden border border-rule relative">
+                  <Suspense
+                    fallback={
+                      <div className="h-full grid place-items-center bg-paper-sunken">
+                        <span className="figure text-ink-faint">loading map…</span>
+                      </div>
+                    }
+                  >
+                    <MapView
+                      place={place}
+                      itinerary={itinerary}
+                      places={places}
+                      hoveredPlace={hoveredPlace}
+                      activeDay={activeDay}
+                    />
+                  </Suspense>
+                </div>
+              )}
 
               {itinerary && (
                 <ItineraryView
@@ -257,6 +291,21 @@ export default function App() {
                 {result?.destination && <DestinationPanelInline brief={result.destination} />}
                 {result?.climate && <ClimatePanelInline climate={result.climate} />}
               </div>
+
+              {result && !plan.running && (
+                <details className="lg:hidden">
+                  <summary className="figure text-ink-faint cursor-pointer py-1">
+                    how this was built — 7 agents, real sources
+                  </summary>
+                  <div className="mt-2">
+                    <AgentRail
+                      agents={plan.agents}
+                      running={plan.running}
+                      elapsedMs={plan.elapsedMs}
+                    />
+                  </div>
+                </details>
+              )}
 
               {result && (result.food || result.critique) && (
                 <div className="grid lg:grid-cols-2 gap-3">
@@ -289,7 +338,7 @@ export default function App() {
           {/* Map + telemetry rail */}
           <aside className="hidden lg:flex flex-col min-h-0 w-[380px] xl:w-[420px] shrink-0">
             <div className="flex-1 min-h-0 relative">
-              {place ? (
+              {place && isDesktop ? (
                 <Suspense
                   fallback={
                     <div className="h-full grid place-items-center bg-paper-sunken">
@@ -321,6 +370,43 @@ export default function App() {
             </div>
           </aside>
         </main>
+      )}
+
+      {/* Mobile place detail. On desktop this lives in the middle column; here
+          there is no room for a third column, so it becomes a sheet. */}
+      {selectedPlace && !isDesktop && (
+        <div
+          className="lg:hidden fixed inset-0 z-50 bg-paper flex flex-col"
+          role="dialog"
+          aria-modal="true"
+          aria-label={`Details for ${selectedPlace.title}`}
+        >
+          <header className="flex items-center gap-2 px-4 h-12 border-b border-rule-strong shrink-0">
+            <span className="eyebrow flex-1">Place</span>
+            <button
+              type="button"
+              onClick={() => setSelectedPlace(null)}
+              aria-label="Close details"
+              className="w-8 h-8 grid place-items-center rounded-xs text-ink-soft hover:text-ink hover:bg-paper-sunken transition-colors"
+            >
+              <X className="w-4 h-4" aria-hidden />
+            </button>
+          </header>
+          <div className="flex-1 min-h-0">
+            <Suspense
+              fallback={
+                <p className="figure text-ink-faint p-4">loading…</p>
+              }
+            >
+              <PlaceDetail
+                place={selectedPlace}
+                itinerary={itinerary}
+                onBack={() => setSelectedPlace(null)}
+                hideBack
+              />
+            </Suspense>
+          </div>
+        </div>
       )}
     </div>
   );

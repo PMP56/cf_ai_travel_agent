@@ -17,6 +17,12 @@ interface PlaceDetailProps {
   place: CuratedPlace;
   itinerary: Itinerary | null;
   onBack: () => void;
+  /**
+   * The mobile sheet supplies its own header with a close control, and "back to
+   * overview" means nothing there — the sheet closes onto the plan, not onto a
+   * context panel. Suppress the internal one rather than stacking two headers.
+   */
+  hideBack?: boolean;
 }
 
 function positionInTrip(itinerary: Itinerary | null, place: CuratedPlace) {
@@ -50,7 +56,7 @@ function Stat({
   );
 }
 
-export default function PlaceDetail({ place, itinerary, onBack }: PlaceDetailProps) {
+export default function PlaceDetail({ place, itinerary, onBack, hideBack }: PlaceDetailProps) {
   const { status, detail } = usePlaceDetail(place.title);
   const position = positionInTrip(itinerary, place);
 
@@ -60,16 +66,18 @@ export default function PlaceDetail({ place, itinerary, onBack }: PlaceDetailPro
 
   return (
     <div className="h-full overflow-y-auto">
-      <header className="sticky top-0 z-10 bg-paper-raised/95 backdrop-blur border-b border-rule px-3 py-2">
-        <button
-          type="button"
-          onClick={onBack}
-          className="figure flex items-center gap-1.5 text-ink-soft hover:text-ink transition-colors"
-        >
-          <ArrowLeft className="w-3 h-3" aria-hidden />
-          overview
-        </button>
-      </header>
+      {!hideBack && (
+        <header className="sticky top-0 z-10 bg-paper-raised/95 backdrop-blur border-b border-rule px-3 py-2">
+          <button
+            type="button"
+            onClick={onBack}
+            className="figure flex items-center gap-1.5 text-ink-soft hover:text-ink transition-colors"
+          >
+            <ArrowLeft className="w-3 h-3" aria-hidden />
+            overview
+          </button>
+        </header>
+      )}
 
       {hero && (
         <img

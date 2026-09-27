@@ -138,6 +138,28 @@ Assumptions made while writing these docs — correct any that are wrong.
 
 ## Session log
 
+### 2026-09-27 — Mobile
+Audited at 390px and 768px, having only ever tested at 1512-1600. No horizontal overflow anywhere
+and the brief, itinerary and context all stacked correctly — but two things were simply absent
+below `lg`: **the map**, and **the place detail**, so tapping a place name did nothing at all.
+
+Both now render, and both needed JS rather than CSS. `useMediaQuery` decides which layout is *live*:
+rendering the map in a desktop column and a mobile block and hiding one with `lg:hidden` would build
+two WebGL contexts, and the detail is a side column on desktop but a full-screen sheet on mobile —
+different parents, so one element cannot merely be restyled. Verified one map instance and one GL
+canvas at every breakpoint.
+
+The hook uses `useSyncExternalStore` rather than useState + useEffect: matchMedia is an external
+store, that is the API for subscribing to one, and it reads during render so there is no first-paint
+flash of the wrong layout and no setState in an effect.
+
+Three smaller mobile fixes: the map sits above the itinerary rather than below it (spatial context
+before five day cards), the pipeline collapses into a `<details>` once the run completes instead of
+putting seven finished rows above the plan, and the sheet suppresses `PlaceDetail`'s own
+"← overview" header so there are not two stacked headers.
+
+Desktop layout is unchanged — every change is behind a breakpoint.
+
 ### 2026-09-27 — Weather chart made legible; context sections separated
 The chart was a floating high/low range bar with a 33°/1° axis and a "warm ▲ · rain ▬" legend —
 a convention that has to be decoded (people read bar *height* as magnitude, not bar *position* as a

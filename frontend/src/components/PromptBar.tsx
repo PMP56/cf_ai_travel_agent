@@ -61,7 +61,7 @@ export default function PromptBar({ onSubmit, onCancel, running, compact }: Prom
           onKeyDown={onKeyDown}
           rows={compact ? 1 : 2}
           disabled={running}
-          placeholder="Where are you going, when, and for how long?"
+          placeholder={compact ? "Change the trip…" : "Where are you going, and when?"}
           className="flex-1 bg-transparent resize-none text-[14px] leading-relaxed placeholder:text-ink-faint focus:outline-none disabled:opacity-50"
         />
 
