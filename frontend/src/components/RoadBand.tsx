@@ -30,15 +30,15 @@ import { memo } from "react";
    height sets the scale, and a wider window simply reveals more road. That
    keeps every object the same size on a phone and on a desktop. */
 const W = 2400;
-const H = 320;
-const LAND_Y = 214;   // horizon: landmarks stand here
-const ROAD_TOP = 222;
-const FAR_Y = 248;    // far lane, oncoming
-const CENTRE_Y = 262;
-const NEAR_Y = 296;   // near lane, our direction
+const H = 1600;
+const LAND_Y = 1484;  // horizon: landmarks stand here
+const ROAD_TOP = 1492;
+const FAR_Y = 1528;   // far lane, oncoming
+const CENTRE_Y = 1550;
+const NEAR_Y = 1596;  // near lane, our direction
 // No near kerb: the road runs off the bottom of the window.
 
-const LANDMARK_SCALE = 1.05;
+const LANDMARK_SCALE = 1.5;
 
 const ink = {
   fill: "none",
@@ -291,81 +291,105 @@ const PAPER = "hsl(var(--paper))";
 const Bus = () => (
   <g {...ink}>
     <path
-      d="M-50 -12 V-42 Q-50 -46 -46 -46 H30 Q39 -46 43 -37 L48 -24 Q50 -19 50 -15 V-12 Z"
+      d="M-96 -13 L-96 -44 C-96 -49 -93 -51 -88 -51 L86 -51 C92 -51 96 -47.5 96 -41
+         L96 -14 C96 -13 95 -13 94 -13 L73.6 -13 A10 10 0 0 0 58.4 -13
+         L-48.4 -13 A10 10 0 0 0 -63.6 -13 Z"
       fill={PAPER}
     />
-    <path d="M-44 -40 H-28 V-27 H-44 Z" />
-    <path d="M-22 -40 H-6 V-27 H-22 Z" />
-    <path d="M0 -40 H16 V-27 H0 Z" />
-    <path d="M24 -40 H36 L42 -27 H24 Z" />
-    <path d="M-50 -18 H44" strokeWidth={1.2} />
-    <circle cx="-32" cy="-7" r="7" fill={PAPER} />
-    <circle cx="30" cy="-7" r="7" fill={PAPER} />
-    <circle cx="-32" cy="-7" r="2.4" strokeWidth={1.2} />
-    <circle cx="30" cy="-7" r="2.4" strokeWidth={1.2} />
+    {[-90, -64, -38, -12, 14, 40].map((x) => (
+      <path key={x} d={`M${x} -46.5 H${x + 20} V-31 H${x} Z`} strokeWidth={1.4} />
+    ))}
+    <path d="M66 -46 C82 -45.5 90 -40 92.5 -32 L66 -32 Z" strokeWidth={1.4} />
+    <path d="M-96 -22 H96" strokeWidth={1.3} />
+    <path d="M60 -31 V-13" strokeWidth={1.3} />
+    <path d="M-84 -51 H-52" strokeWidth={1.6} />
+    <circle cx="-56" cy="-8" r="8" fill={PAPER} />
+    <circle cx="66" cy="-8" r="8" fill={PAPER} />
+    <circle cx="-56" cy="-8" r="3" strokeWidth={1.2} />
+    <circle cx="66" cy="-8" r="3" strokeWidth={1.2} />
   </g>
 );
 
 const Car = () => (
   <g {...ink}>
     <path
-      d="M-32 -11 L-27 -22 Q-21 -30 -8 -30 H5 Q14 -30 20 -22 L30 -17 Q34 -16 34 -12 V-11 Z"
+      d="M-36 -6 L-36 -14 C-36 -21 -31 -25 -24 -26 L-6 -27 C3 -27 8 -25 12 -21
+         L19 -15 L30 -13.5 C34.5 -13 36 -11 36 -8 L36 -6
+         L26 -6 A6 6 0 0 0 14 -6 L-14 -6 A6 6 0 0 0 -26 -6 Z"
       fill={PAPER}
     />
-    <path d="M-21 -23 Q-17 -28 -8 -28 H-3 V-23 Z" strokeWidth={1.3} />
-    <path d="M2 -28 H4 Q11 -28 16 -22 H2 Z" strokeWidth={1.3} />
-    <circle cx="-18" cy="-6" r="6" fill={PAPER} />
-    <circle cx="19" cy="-6" r="6" fill={PAPER} />
-    <circle cx="-18" cy="-6" r="2" strokeWidth={1.1} />
-    <circle cx="19" cy="-6" r="2" strokeWidth={1.1} />
+    <path d="M-25 -24.4 H-10 V-18 H-26.8 Z" strokeWidth={1.4} />
+    <path d="M-7 -25.2 C1 -25.2 5.5 -23.4 9 -20 H-7 Z" strokeWidth={1.4} />
+    <path d="M-8.5 -26 V-6" strokeWidth={1.3} />
+    <path d="M-19 -16 H-13" strokeWidth={1.3} />
+    <path d="M-35 -11 H-31 M32 -12.4 H35.4" strokeWidth={1.4} />
+    <circle cx="-20" cy="-5.4" r="5.4" fill={PAPER} />
+    <circle cx="20" cy="-5.4" r="5.4" fill={PAPER} />
+    <circle cx="-20" cy="-5.4" r="2" strokeWidth={1.2} />
+    <circle cx="20" cy="-5.4" r="2" strokeWidth={1.2} />
   </g>
 );
 
 const Camper = () => (
   <g {...ink}>
     <path
-      d="M-38 -12 V-44 Q-38 -48 -34 -48 H10 V-30 L22 -26 Q30 -24 32 -17 L33 -12 Z"
+      d="M-47 -11 L-47 -41 C-47 -44 -45 -45.5 -42 -45.5 L12 -45.5 C18 -45.5 21 -44 24 -40
+         L31 -30 C34.5 -25.5 36 -21 36 -15.5 L36 -11
+         L30.8 -11 A6.8 6.8 0 0 0 17.2 -11 L-23.2 -11 A6.8 6.8 0 0 0 -36.8 -11 Z"
       fill={PAPER}
     />
-    <path d="M-30 -52 H-4 V-48 H-30 Z" fill={PAPER} strokeWidth={1.3} />
-    <path d="M-32 -42 H-14 V-30 H-32 Z" />
-    <path d="M-8 -42 H4 V-30 H-8 Z" strokeWidth={1.3} />
-    <path d="M14 -25 H24 L27 -18 H14 Z" strokeWidth={1.3} />
-    <path d="M-38 -20 H32" strokeWidth={1.2} />
-    <circle cx="-24" cy="-7" r="7" fill={PAPER} />
-    <circle cx="20" cy="-7" r="7" fill={PAPER} />
-    <circle cx="-24" cy="-7" r="2.4" strokeWidth={1.2} />
-    <circle cx="20" cy="-7" r="2.4" strokeWidth={1.2} />
+    <path d="M-43 -45.5 L-8 -45.5 L-10 -53 L-41 -53 Z" fill={PAPER} strokeWidth={1.5} />
+    <path d="M-42 -40 H-25 V-27 H-42 Z" strokeWidth={1.4} />
+    <path d="M-19 -40 H-2 V-27 H-19 Z" strokeWidth={1.4} />
+    <path d="M6 -40 C13 -40 16 -38.5 19 -35 L25 -26.5 H6 Z" strokeWidth={1.4} />
+    <path d="M-47 -19 H36" strokeWidth={1.3} />
+    <path d="M2 -45.5 V-11" strokeWidth={1.3} />
+    <path d="M-12 -33 H-6" strokeWidth={1.3} />
+    <path d="M32.5 -17 H35.8" strokeWidth={1.4} />
+    <circle cx="-30" cy="-6.8" r="6.8" fill={PAPER} />
+    <circle cx="24" cy="-6.8" r="6.8" fill={PAPER} />
+    <circle cx="-30" cy="-6.8" r="2.6" strokeWidth={1.2} />
+    <circle cx="24" cy="-6.8" r="2.6" strokeWidth={1.2} />
   </g>
 );
 
 const Truck = () => (
   <g {...ink}>
-    <path d="M-54 -12 V-46 H2 V-12 Z" fill={PAPER} />
+    <path d="M-60 -13 L-60 -52 L22 -52 L22 -13 Z" fill={PAPER} />
     <path
-      d="M4 -12 V-34 H18 Q22 -34 24 -30 L30 -20 Q32 -16 32 -13 V-12 Z"
+      d="M26 -13 L26 -36 C26 -39 28 -40 31 -40 L44 -40 C48 -40 50 -38 52 -34.5
+         L58 -24 C60 -20.5 60 -17 60 -14.5 L60 -13 L53.6 -13 A7.2 7.2 0 0 0 39.2 -13 Z"
       fill={PAPER}
     />
-    <path d="M8 -31 H18 L23 -21 H8 Z" strokeWidth={1.3} />
-    <path d="M-54 -22 H2" strokeWidth={1.2} />
-    <path d="M-40 -46 V-12 M-22 -46 V-12" strokeWidth={1.1} />
-    <circle cx="-42" cy="-7" r="7" fill={PAPER} />
-    <circle cx="-16" cy="-7" r="7" fill={PAPER} />
-    <circle cx="20" cy="-7" r="7" fill={PAPER} />
+    <path d="M32 -37 H44 L50 -26 H32 Z" strokeWidth={1.4} />
+    <path d="M-60 -22 H22" strokeWidth={1.3} />
+    <path d="M-33 -52 V-13 M-6 -52 V-13" strokeWidth={1.1} />
+    <path d="M22 -30 H26" strokeWidth={1.3} />
+    <circle cx="-44" cy="-7.2" r="7.2" fill={PAPER} />
+    <circle cx="-27" cy="-7.2" r="7.2" fill={PAPER} />
+    <circle cx="46" cy="-7.2" r="7.2" fill={PAPER} />
+    <circle cx="-44" cy="-7.2" r="2.7" strokeWidth={1.2} />
+    <circle cx="-27" cy="-7.2" r="2.7" strokeWidth={1.2} />
+    <circle cx="46" cy="-7.2" r="2.7" strokeWidth={1.2} />
   </g>
 );
 
-
 const Cyclist = () => (
   <g {...ink}>
-    <circle cx="-14" cy="-9" r="9" fill={PAPER} />
-    <circle cx="16" cy="-9" r="9" fill={PAPER} />
-    <path d="M-14 -9 L-1 -9 L5 -25 M-1 -9 L16 -9 M16 -9 L9 -25" strokeWidth={1.4} />
-    <path d="M5 -25 H12" strokeWidth={1.4} />
-    <path d="M-1 -9 L-6 -22 L4 -30" strokeWidth={1.5} />
-    <path d="M4 -30 L13 -27" strokeWidth={1.5} />
-    <circle cx="8" cy="-36" r="4.5" fill={PAPER} />
-    <path d="M4 -30 L8 -32" strokeWidth={1.4} />
+    <circle cx="-16" cy="-5.6" r="5.6" fill={PAPER} />
+    <circle cx="16" cy="-5.6" r="5.6" fill={PAPER} />
+    <circle cx="-16" cy="-5.6" r="1.6" strokeWidth={1} />
+    <circle cx="16" cy="-5.6" r="1.6" strokeWidth={1} />
+    <path d="M-16 -5.6 H-1 L6 -19 M-1 -5.6 H16 M6 -19 H-8 L-16 -5.6" strokeWidth={1.5} />
+    <path d="M16 -5.6 L10 -19 H6" strokeWidth={1.5} />
+    <path d="M-8 -19 L-9 -23.5" strokeWidth={1.5} />
+    <path d="M-11.5 -23.5 H-6.5 V-25 H-11.5 Z" fill={PAPER} strokeWidth={1.2} />
+    <path d="M10 -19 L13.5 -25.5 H19" strokeWidth={1.5} />
+    <path d="M-1 -5.6 L-5 -16 L1 -27" strokeWidth={1.7} />
+    <path d="M1 -27 L12 -24.5" strokeWidth={1.7} />
+    <path d="M1 -27 L3 -33" strokeWidth={1.7} />
+    <circle cx="6" cy="-36" r="4" fill={PAPER} />
+    <path d="M3 -33 L14 -25.5" strokeWidth={1.5} />
   </g>
 );
 
@@ -426,9 +450,11 @@ const LAND_PLACEMENT = [
 ] as const;
 
 const CLOUD_TILE = 1800;
+/* Spread up the full height of the window, so they read as sky behind the
+   page rather than a strip squeezed above the rooftops. */
 const CLOUD_PLACEMENT: [number, number, number][] = [
-  [90, 52, 1.1], [360, 32, 0.8], [620, 66, 0.95], [880, 40, 1.15],
-  [1130, 58, 0.85], [1400, 30, 1.0], [1650, 70, 0.75],
+  [90, 790, 1.5], [360, 560, 1.2], [620, 1060, 1.45], [880, 660, 1.7],
+  [1130, 920, 1.3], [1400, 520, 1.5], [1650, 1180, 1.15],
 ];
 
 /** Dash period. Long enough that the markings do not strobe once moving. */
@@ -447,7 +473,7 @@ function RoadBand({ reduced = false }: { reduced?: boolean }) {
         role="presentation"
       >
         {/* ---- Sky: the slowest layer, so it reads as farthest ---- */}
-        <g className="road-clouds" style={{ opacity: 0.3 }}>
+        <g className="road-clouds" style={{ opacity: 0.26 }}>
           {[0, CLOUD_TILE].map((off) =>
             CLOUD_PLACEMENT.map(([x, y, s], i) => (
               <g key={`${off}-${i}`} transform={`translate(${x + off} ${y})`}>
@@ -459,7 +485,7 @@ function RoadBand({ reduced = false }: { reduced?: boolean }) {
 
         <g style={{ opacity: 0.4 }}>
           <g className="road-bob-slow">
-            <g transform="translate(420 40)">
+            <g transform="translate(420 1010) scale(1.5)">
               <Birds s={0.85} />
             </g>
           </g>
@@ -469,33 +495,33 @@ function RoadBand({ reduced = false }: { reduced?: boolean }) {
             flies left is the same drawing mirrored, never the same drawing
             pointed the wrong way. */}
         <g className="road-fly-right" style={{ opacity: 0.75 }}>
-          <g transform="translate(0 62)">
+          <g transform="translate(0 1120) scale(1.9)">
             <Plane />
           </g>
         </g>
         <g className="road-fly-left" style={{ opacity: 0.5 }}>
-          <g transform="translate(0 30) scale(-0.88 0.88)">
+          <g transform="translate(0 1300) scale(-1.5 1.5)">
             <Plane />
           </g>
         </g>
 
         <g className="road-drift-balloon-a" style={{ opacity: 0.68 }}>
           <g className="road-bob-a">
-            <g transform="translate(0 116)">
+            <g transform="translate(0 1330) scale(1.8)">
               <Balloon />
             </g>
           </g>
         </g>
         <g className="road-drift-balloon-b" style={{ opacity: 0.5 }}>
           <g className="road-bob-b">
-            <g transform="translate(0 84) scale(0.72)">
+            <g transform="translate(0 1160) scale(1.35)">
               <Balloon />
             </g>
           </g>
         </g>
 
         {/* ---- Background: the landmarks, on the horizon ---- */}
-        <g className="road-landmarks" style={{ opacity: 0.54 }}>
+        <g className="road-landmarks" style={{ opacity: 0.6 }}>
           {[0, LAND_TILE].map((off) =>
             LANDMARKS.map((Landmark, i) => {
               const [x, s] = LAND_PLACEMENT[i];

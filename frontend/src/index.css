@@ -401,16 +401,17 @@ select optgroup {
    pointer-events: none so a decorative band can never swallow a click, and the
    gradient gives it an opaque floor that occludes anything scrolling behind it
    while keeping the sky edge soft rather than a ruled line. */
+/* The whole scene is a fixed background layer: road pinned to the foot of the
+   window and sky filling everything above it, so clouds and balloons sit behind
+   the page rather than being squeezed into a strip above the rooftops.
+
+   pointer-events: none so a decorative layer can never swallow a click. */
 .road-band {
   position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: var(--band-h);
+  inset: 0;
   z-index: 0;
   pointer-events: none;
   color: hsl(var(--ink));
-  background: linear-gradient(to bottom, transparent 0%, hsl(var(--paper)) 30%);
 }
 
 .road-band g[class^="road-"] {
@@ -485,6 +486,15 @@ select optgroup {
 }
 
 @keyframes road-sails { to { transform: rotate(360deg); } }
+
+/* On a phone the content is taller than the window, so it scrolls across a
+   fixed background and the skyline inevitably sits behind the cards. Letting
+   the whole layer recede keeps that from reading as clutter. */
+@media (max-width: 767px) {
+  .road-band {
+    opacity: 0.55;
+  }
+}
 
 .road-still,
 .road-still * {

@@ -141,7 +141,7 @@ export default function App() {
       {!started ? (
         /* ---- Cold start: one question, centred ---- */
         <>
-        <main className="flex-1 min-h-0 overflow-y-auto flex flex-col pb-[var(--band-h)]">
+        <main className="relative z-10 flex-1 min-h-0 overflow-y-auto flex flex-col pb-[var(--band-h)]">
           <div className="w-full max-w-[860px] mx-auto px-6 pt-[clamp(28px,6vh,64px)] pb-4">
             <p className="eyebrow">Plan a trip</p>
             <h1 className="display text-[clamp(40px,6.5vw,76px)] mt-2 mb-4">

@@ -138,6 +138,49 @@ Assumptions made while writing these docs — correct any that are wrong.
 
 ## Session log
 
+### 2026-09-27 — Road band: sky behind the page, and realistic vehicles
+Two faults reported: the clouds and balloons looked gone, and the vehicles looked cartoonish.
+
+**The sky was not clipped — it was crushed.** Nothing fell outside the band; the whole sky was
+squeezed into the 82px between the rooftops and the band's top edge, so the clouds read as slivers.
+The fix was structural: the scene is no longer a strip but a **full-viewport fixed background
+layer** (`inset: 0`) with a viewBox of 2400×1600, the road pinned at the foot and the sky filling
+everything above it. Clouds, balloons and aircraft are distributed up the page, behind the content,
+which is what was asked for. Content gets `relative z-10`; the layer keeps `pointer-events: none`,
+and a Playwright check types into the prompt through it to prove it is not swallowing clicks.
+
+Because the SVG is sliced, the scale is `max(vw/2400, vh/1600)`. On desktop that is width-driven,
+so a wider window reveals more scene at a constant object size; on a phone it becomes height-driven
+and crops horizontally instead of shrinking everything to nothing.
+
+**The vehicles were cartoonish because their proportions were invented.** They are now drawn from
+real dimensions at a fixed 1m = 16 units: hatchback 4.3×1.5m, coach 12×3.2m, camper 5.9×2.6m, box
+truck 7.5×3.3m, bicycle 1.75m. Getting the *relative* sizes right — a coach is two and a half cars
+long — does more for realism than any amount of detail. Searched for a reference animation first;
+CodePen's car scenes are deliberately cartoonish and the stock-art results are not usable, so real
+dimensions were the better source.
+
+Two drawing lessons worth keeping:
+
+- **Arc sweep settled by experiment, not reasoning.** A wheel arch is `A r r 0 0 0` — sweep 0 cuts
+  the arch up into the body, sweep 1 bulges it down below the sill. Rendering both side by side
+  took one pass; reasoning about it had already produced the wrong answer twice.
+- **Ride height is what sold it.** The first attempt put the sill at -12 with the wheels hanging
+  entirely beneath, which is why it read as a toy. On a real car the rocker sits about 0.35m up and
+  the wheels rise *into* the arches above it.
+
+The vehicles were developed in a standalone HTML harness rendered at 10x rather than by
+round-tripping through the app, which made each iteration a few seconds instead of a rebuild.
+
+Re-audited after the size change: **zero same-lane overlaps across the full 110s loop**, tightest
+gap 517px, about 4.3 vehicles on screen. Sky objects cross in 1.9% of samples, which is inherent to
+independent speeds and now occludes cleanly because everything carries a paper silhouette fill.
+
+On a phone the content is taller than the window, so it scrolls across the fixed background and the
+skyline necessarily sits behind the cards; the layer drops to 55% opacity below 768px so that reads
+as depth rather than clutter. Document scroll is absent at 1512×1000, 1440×720, 390×844 and
+2560×1300. Reduced motion holds everything still. Lint, 25 tests and build clean.
+
 ### 2026-09-27 — Road band: full-bleed, fixed, decluttered
 Prashanna approved the road scene and asked for four changes: full width, fixed to the foot of the
 window with no page scroll, no roadside furniture, and less traffic.
