@@ -138,6 +138,48 @@ Assumptions made while writing these docs — correct any that are wrong.
 
 ## Session log
 
+### 2026-09-27 — Review pass: MapLibre was running without its worker
+A review of the day's 25 commits found two real defects and one latent one. Both checks and the
+build were already green, so none of these would have been caught by the existing suite.
+
+**MapLibre has been running with no web worker, in production.** The console showed "Worker failed
+to load" twice on the deployed site while the map drew perfectly, which is exactly why it went
+unnoticed: MapLibre catches the failure and silently moves all tile decoding and geometry onto the
+main thread.
+
+The chain took a few steps to unpick and is worth recording:
+
+1. maplibre-gl 6 computes its worker URL at runtime — `new URL('./maplibre-gl-worker.mjs',
+   import.meta.url)` built from a variable, not a static literal — so Vite's bundler never sees a
+   worker dependency and never emits the file.
+2. The computed URL pointed at `/assets/maplibre-gl-worker.mjs`, which did not exist. Because this
+   is an SPA, the host answered **200 with index.html** rather than 404 — so there was no failed
+   request to notice, just a worker being handed HTML.
+3. Fixing it with `setWorkerUrl` plus Vite's `?url` got the right file served with the right MIME
+   type, and the worker *still* died: the shipped worker is a 19kB shim that imports a sibling,
+   `./maplibre-gl-shared.mjs`, which copying one file leaves dangling.
+4. `?worker&url` bundles the worker with its dependencies — 508kB, self-contained.
+
+Verified against a production preview: **workers alive: 1, console errors: none**, nine pins still
+rendering. Needs a redeploy to reach the live site.
+
+**Focus escaped into the collapsed details panel.** The panel added earlier today is `aria-hidden`
+when collapsed but still contained two focusable elements — the back button and the Wikipedia link
+— and Shift+Tab walked straight into them, landing focus on something removed from the
+accessibility tree. Both containers now take `inert`, which removes them from the tab order and the
+a11y tree together. Confirmed: Shift+Tab no longer enters, and the panel still reopens normally.
+
+**A pinned popup outlived its marker.** Rebuilding markers on a data change left an open popup
+describing a place that might no longer be on the map, with `pinned` still matching its title. The
+rebuild now clears the popup, the hover timer and the pinned title first.
+
+Also noted, not changed: the Backlog section above is stale — written for v1, it still lists
+`parsePlanResponse`, `plan.ts`, `/api/generate` and `MessageContent.tsx`, all deleted in the v2
+rewrite, plus "add tests" and the CORS and rate-limiting items, all since done. It needs rewriting
+before it is trusted.
+
+Frontend lint, 25 tests and build clean; worker typecheck and 63 tests clean.
+
 ### 2026-09-27 — Restore the popup tip (a self-inflicted regression)
 The previous entry's tip fix removed the tip altogether. Worth writing down because the mistake was
 reasonable and wrong.

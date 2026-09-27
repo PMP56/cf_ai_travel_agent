@@ -6,10 +6,27 @@ import {
   NavigationControl,
   LngLatBounds,
 } from "maplibre-gl";
+import { setWorkerUrl } from "maplibre-gl";
 import type { StyleSpecification } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
+// `?worker&url`, not plain `?url`: the shipped worker imports a sibling,
+// ./maplibre-gl-shared.mjs, so copying the one file leaves that import dangling.
+// This bundles the worker with its dependencies and returns the asset's URL.
+import maplibreWorkerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url";
 import type { CuratedPlace, Itinerary, ResolvedPlace } from "../types";
 import { dayColour } from "../dayColour";
+
+/*
+ * maplibre-gl 6 derives its worker URL at runtime from `import.meta.url`
+ * rather than a static `new URL(..., import.meta.url)` literal, so Vite's
+ * bundler never sees a worker dependency and never emits the file. The URL it
+ * computes then points at `/assets/maplibre-gl-worker.mjs`, which does not
+ * exist — and because this is an SPA, the host answers 200 with index.html
+ * instead of 404. The browser refuses to start a worker from HTML, MapLibre
+ * catches the failure and quietly does all tile and geometry work on the main
+ * thread. The map still draws, which is why this went unnoticed.
+ */
+setWorkerUrl(maplibreWorkerUrl);
 
 /**
  * The itinerary plotted on real ground.
@@ -139,6 +156,13 @@ export default function MapView({
   useEffect(() => {
     const m = map.current;
     if (!m) return;
+
+    // Any open popup belongs to the markers about to be destroyed. Left alone,
+    // a pinned one survives the rebuild still describing a place that may no
+    // longer be on the map, and `pinned` keeps matching a stale title.
+    window.clearTimeout(hoverTimer.current);
+    popup.current?.remove();
+    pinned.current = null;
 
     for (const marker of markers.current.values()) marker.remove();
     markers.current.clear();

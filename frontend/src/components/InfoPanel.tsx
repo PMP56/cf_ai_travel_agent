@@ -63,6 +63,10 @@ export default function InfoPanel({
     >
       <div
         aria-hidden={collapsed}
+        /* inert, not just aria-hidden: the panel keeps a back button and a
+           Wikipedia link, and Shift+Tab walked straight into them while it was
+           hidden — focus landing on something removed from the a11y tree. */
+        inert={collapsed}
         className={`flex flex-col min-h-0 h-full w-[380px] xl:w-[420px] shrink-0 transition-opacity duration-200 ${
           collapsed ? "opacity-0 pointer-events-none" : "opacity-100 delay-100"
         }`}
@@ -126,6 +130,7 @@ export default function InfoPanel({
       {/* The collapsed rail, cross-faded against the panel so neither pops. */}
       <div
         aria-hidden={!collapsed}
+        inert={!collapsed}
         className={`absolute inset-0 flex flex-col items-center transition-opacity duration-200 ${
           collapsed ? "opacity-100 delay-100" : "opacity-0 pointer-events-none"
         }`}
