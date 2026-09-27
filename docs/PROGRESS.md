@@ -138,6 +138,33 @@ Assumptions made while writing these docs — correct any that are wrong.
 
 ## Session log
 
+### 2026-09-27 — Homepage trim and animation polish
+Six requested changes, all verified by measurement and screenshot rather than by eye alone.
+
+- **Source tiles removed.** The Wikipedia/Wikivoyage/ERA5/OpenStreetMap strip is gone from the
+  home page. With it and the long paragraph gone, the page now fits a 390×844 phone with no
+  scrolling at all.
+- **The intro is one line**: "A day-by-day plan for anywhere you're going." The old copy explained
+  the architecture, which is not what a first-time visitor needs.
+- **The planes are airliners now.** The old shape was a cigar with fins. Redrawn from a real side
+  profile: long slim fuselage, upswept tail cone, swept vertical fin, tailplane, a wing reading as
+  a swept blade, an engine nacelle beneath it, and a window line. Developed in the standalone
+  harness at 5x and checked at actual scene scale, where the smaller one is only 65px wide.
+- **The whole layer sits back** at `opacity: 0.66` (0.42 on phones). It was competing with the
+  prompt; it should be atmosphere.
+- **Monument spacing doubled and made uniform** — eighteen monuments at an even 280 units, tile
+  5040, with the scroll duration doubled to 300s so the speed is unchanged. Only the per-monument
+  scale still varies, which keeps some depth without the ragged rhythm of hand-placed offsets.
+  Measured centre-to-centre: 231px throughout; the ±8px on two of them is bounding-box asymmetry
+  in the artwork (the Duomo's campanile sits off to one side), not uneven placement.
+- **The two aircraft are clearly different and never collide** — 103px against 65px, a ratio of
+  1.58, in separate horizontal bands. Swept the full 300s cycle at half-second steps: zero
+  intersections among the four sky objects, tightest vertical gap 5px.
+
+Re-checked for top-cropping after the geometry edits at 1512×1000, 1920×1080, 2560×1080, 3440×1200
+and 390×844 — all clean. Reduced motion static, prompt still clickable through the layer. Lint, 25
+tests and build clean.
+
 ### 2026-09-27 — Road band: fix the top-cropping, scale up rather than down
 Shrinking the band to the lower third cropped the top of the scene instead of fitting it — the
 clouds and aircraft lost their heads. The cause was arithmetic, not layout.

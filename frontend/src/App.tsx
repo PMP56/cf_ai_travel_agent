@@ -147,10 +147,8 @@ export default function App() {
             <h1 className="display text-[clamp(40px,6.5vw,76px)] mt-2 mb-4">
               Every place, verified.
             </h1>
-            <p className="text-[15px] text-ink-soft leading-relaxed mb-8 max-w-[52ch]">
-              Seven agents work in parallel over real sources. Nothing in your itinerary is
-              invented — every place carries its coordinates, its photograph and a link to
-              where it came from.
+            <p className="text-[17px] text-ink-soft leading-relaxed mb-8 max-w-[44ch]">
+              A day-by-day plan for anywhere you're going.
             </p>
 
             <PromptBar onSubmit={plan.submit} onCancel={plan.cancel} running={plan.running} />
@@ -166,20 +164,6 @@ export default function App() {
               see a finished plan — no account, no waiting
             </button>
 
-            {/* The sources are the product's argument, so they get stated up front. */}
-            <dl className="grid grid-cols-2 sm:grid-cols-4 gap-px mt-10 bg-rule border border-rule rounded-sm overflow-hidden">
-              {[
-                ["Wikipedia", "places, ranked by real pageviews"],
-                ["Wikivoyage", "human-written local guides"],
-                ["ERA5", "five-year climate normals"],
-                ["OpenStreetMap", "the map beneath it all"],
-              ].map(([name, what]) => (
-                <div key={name} className="bg-paper-raised px-3 py-3">
-                  <dt className="text-[13px] font-semibold tracking-tight">{name}</dt>
-                  <dd className="figure text-ink-faint mt-1 leading-relaxed">{what}</dd>
-                </div>
-              ))}
-            </dl>
           </div>
 
         </main>

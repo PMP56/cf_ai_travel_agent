@@ -418,6 +418,9 @@ select optgroup {
   z-index: 0;
   pointer-events: none;
   color: hsl(var(--ink));
+  /* Sit back into the page. At full strength the scene competed with the
+     prompt above it; this keeps it as atmosphere. */
+  opacity: 0.66;
 }
 
 .road-band g[class^="road-"] {
@@ -431,7 +434,7 @@ select optgroup {
   stroke-width: 1.5;
 }
 
-@keyframes road-land   { to { transform: translateX(-2520px); } }
+@keyframes road-land   { to { transform: translateX(-5040px); } }
 @keyframes road-cloud  { to { transform: translateX(-1800px); } }
 @keyframes road-dash   { to { transform: translateX(-120px); } }
 
@@ -448,7 +451,7 @@ select optgroup {
    like it is sliding rather than being driven. */
 @keyframes road-jolt   { 30% { transform: translateY(1px); } 70% { transform: translateY(-0.6px); } }
 
-.road-landmarks { animation: road-land  150s linear infinite; }
+.road-landmarks { animation: road-land  300s linear infinite; }
 .road-clouds    { animation: road-cloud 300s linear infinite; }
 .road-dashes    { animation: road-dash  1.7s linear infinite; }
 
@@ -498,7 +501,7 @@ select optgroup {
    the whole layer recede keeps that from reading as clutter. */
 @media (max-width: 767px) {
   .road-band {
-    opacity: 0.55;
+    opacity: 0.42;
   }
 }
 

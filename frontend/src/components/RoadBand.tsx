@@ -407,12 +407,22 @@ const Cyclist = () => (
 
 const Plane = () => (
   <g {...ink}>
-    <path d="M-24 -8 L-31 -22 H-21 L-13 -8 Z" fill={PAPER} />
-    <path d="M-2 5 L-11 18 H2 L9 4 Z" fill={PAPER} />
-    <path d="M-30 -1 Q-30 -7 -18 -8 H8 Q24 -7 32 0 Q24 5 8 6 H-18 Q-30 5 -30 -1 Z" fill={PAPER} />
-    <path d="M-14 -2 H-6 M-1 -2 H6" strokeWidth={1.1} />
+    {/* Swept fin and tailplane first, so the fuselage fill covers their roots. */}
+    <path d="M-16 -5.5 L-28 -28 L-36 -28 L-36 -9 Z" fill={PAPER} />
+    <path d="M-28 -10 L-43 -14 L-41 -9 L-28 -7 Z" fill={PAPER} />
+    <path
+      d="M40 0.2 C39.5 -2.6 36 -4.2 31 -4.6 L-14 -5.4
+         C-24 -5.8 -32 -7.6 -41 -11.6 C-35 -5.6 -30 -1.4 -23 0.8
+         C-17 2.8 -12 3.6 -6 3.8 L20 3.6 C29 3.4 35.5 2.4 39 1.2 Z"
+      fill={PAPER}
+    />
+    <path d="M10 2.8 L-11 9.6 L-2 10.4 L17 3.4 Z" fill={PAPER} />
+    <path d="M3 4.4 L-5 4.6 C-8.6 4.7 -8.6 9.4 -5 9.3 L2.4 9.1 C5.6 9 5.6 4.3 3 4.4 Z" fill={PAPER} />
+    <path d="M32 -2.4 L36.4 -1.4" strokeWidth={1.3} />
+    <path d="M8 -1.2 H22 M-10 -1 H1" strokeWidth={1} />
   </g>
 );
+
 
 const Balloon = () => (
   <g {...ink}>
@@ -447,16 +457,17 @@ const LANDMARKS = [
   StBasils, GoldenGate, Sagrada, Stonehenge, AngkorWat, Liberty,
 ];
 
-/** Tile width for the landmark strip. Wider than the frame, so the run of
- *  buildings does not visibly repeat within one pass. */
-const LAND_TILE = 2520;
+/** Tile width for the landmark strip: eighteen monuments at an even 280 apart,
+ *  twice the spacing they had. Wider than the frame, so the run of buildings
+ *  does not visibly repeat within one pass. */
+const LAND_TILE = 5040;
+const LAND_GAP = LAND_TILE / 18;
 
-/** Hand-placed offsets and scales: even spacing reads as a fence, and a
- *  uniform scale flattens the depth the parallax is trying to create. */
-const LAND_PLACEMENT = [
-  [40, 1.0], [185, 0.86], [330, 1.08], [470, 0.92], [615, 1.0], [745, 0.88],
-  [880, 1.06], [1020, 0.95], [1155, 1.0], [1300, 0.9], [1435, 1.04], [1570, 0.94],
-  [1710, 1.0], [1850, 0.88], [1990, 1.05], [2120, 0.92], [2255, 1.0], [2395, 0.9],
+/** Spacing is uniform; only the scale varies, which keeps a little depth in the
+ *  skyline without the ragged rhythm that hand-placed offsets gave it. */
+const LAND_SCALES = [
+  1.0, 0.86, 1.08, 0.92, 1.0, 0.88, 1.06, 0.95, 1.0,
+  0.9, 1.04, 0.94, 1.0, 0.88, 1.05, 0.92, 1.0, 0.9,
 ] as const;
 
 const CLOUD_TILE = 1800;
@@ -505,12 +516,12 @@ function RoadBand({ reduced = false }: { reduced?: boolean }) {
             flies left is the same drawing mirrored, never the same drawing
             pointed the wrong way. */}
         <g className="road-fly-right" style={{ opacity: 0.75 }}>
-          <g transform="translate(0 62) scale(1.5)">
+          <g transform="translate(0 56) scale(1.5)">
             <Plane />
           </g>
         </g>
         <g className="road-fly-left" style={{ opacity: 0.5 }}>
-          <g transform="translate(0 112) scale(-1.3 1.3)">
+          <g transform="translate(0 128) scale(-0.95 0.95)">
             <Plane />
           </g>
         </g>
@@ -533,17 +544,16 @@ function RoadBand({ reduced = false }: { reduced?: boolean }) {
         {/* ---- Background: the landmarks, on the horizon ---- */}
         <g className="road-landmarks" style={{ opacity: 0.6 }}>
           {[0, LAND_TILE].map((off) =>
-            LANDMARKS.map((Landmark, i) => {
-              const [x, s] = LAND_PLACEMENT[i];
-              return (
-                <g
-                  key={`${off}-${i}`}
-                  transform={`translate(${x + off} ${LAND_Y}) scale(${LANDMARK_SCALE * s})`}
-                >
-                  <Landmark />
-                </g>
-              );
-            })
+            LANDMARKS.map((Landmark, i) => (
+              <g
+                key={`${off}-${i}`}
+                transform={`translate(${i * LAND_GAP + LAND_GAP / 2 + off} ${LAND_Y}) scale(${
+                  LANDMARK_SCALE * LAND_SCALES[i]
+                })`}
+              >
+                <Landmark />
+              </g>
+            ))
           )}
         </g>
 
