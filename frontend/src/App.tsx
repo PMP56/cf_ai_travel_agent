@@ -25,6 +25,7 @@ import {
   ClimatePanelInline,
 } from "./components/Dossier";
 import InfoPanel from "./components/InfoPanel";
+import SurveyStrip from "./components/SurveyStrip";
 
 /**
  * Workspace shell.
@@ -137,8 +138,8 @@ export default function App() {
 
       {!started ? (
         /* ---- Cold start: one question, centred ---- */
-        <main className="flex-1 overflow-y-auto">
-          <div className="w-full max-w-[860px] mx-auto px-6 pt-[clamp(32px,7vh,72px)] pb-16">
+        <main className="flex-1 overflow-y-auto flex flex-col">
+          <div className="w-full max-w-[860px] mx-auto px-6 pt-[clamp(28px,6vh,64px)] pb-4">
             <p className="eyebrow">Plan a trip</p>
             <h1 className="display text-[clamp(40px,6.5vw,76px)] mt-2 mb-4">
               Every place, verified.
@@ -174,6 +175,11 @@ export default function App() {
                 </div>
               ))}
             </dl>
+          </div>
+
+          {/* Anchors the foot of the page, which was a large empty area. */}
+          <div className="mt-auto">
+            <SurveyStrip />
           </div>
         </main>
       ) : (

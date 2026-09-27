@@ -138,6 +138,40 @@ Assumptions made while writing these docs — correct any that are wrong.
 
 ## Session log
 
+### 2026-09-27 — Homepage animation: the survey strip
+The brief was "a bus drives in from the left, a plane takes off on the right". The instinct —
+movement at the foot of the page — was right, but the vocabulary would have fought the design: this
+is an editorial field guide in serif and monospace whose headline reads "Every place, verified", and
+vehicle clipart reads as a budget booking site. It is also exactly the "meaningless illustration
+fluff" the 2026 design research warned about.
+
+So the same idea is rendered as cartography. A route plots itself like a survey sheet coming off a
+plotter: contours drift at three speeds, waypoints drop in the day-colours the real map uses, a
+dashed route draws between them, and a chevron travels the line. Past the last waypoint it climbs
+out and leaves the frame — which is where the plane went, as an air route rather than an aircraft.
+It depicts what the product does (find places, cluster, route) instead of decorating the page.
+
+Pure SVG and CSS, no library, nothing on the main thread. Four iterations, screenshotting each.
+
+Two real bugs found only by looking:
+
+**The route was never drawing.** Animating `stroke-dashoffset` on a path that already carries a
+repeating `stroke-dasharray` *slides the dash pattern along* — it does not reveal progressively, so
+the whole line was present from the first frame while the traveller was still mid-route. The reveal
+now lives in an SVG mask: a solid stroke with `pathLength=1` and `dasharray=1` whose offset runs
+1 to 0, uncovering the dashed route beneath. The mask and the traveller share one 8%-58% keyframe
+segment, so the mark always sits exactly at the pen tip.
+
+**The departure doubled the route.** Its path was route-plus-tail, so it drew a second fainter
+dashed line over the whole route. It is now just the tail.
+
+Reduced motion settles into the finished survey — route complete, all five waypoints, nothing
+animating. Verified, along with dark mode and 390px.
+
+Also removed `framer-motion`: nothing had imported it since the v1 components were deleted. It was
+already tree-shaken out, so this does not shrink the bundle — it removes a dependency from the
+supply chain and ~100kB from node_modules.
+
 ### 2026-09-27 — Mobile
 Audited at 390px and 768px, having only ever tested at 1512-1600. No horizontal overflow anywhere
 and the brief, itinerary and context all stacked correctly — but two things were simply absent
