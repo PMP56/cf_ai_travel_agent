@@ -171,8 +171,9 @@ export default function MapView({
       // A pin is now an action, so it is reachable and operable by keyboard.
       el.setAttribute("role", "button");
       el.setAttribute("tabindex", "0");
+      // No `title`: the browser's native tooltip fired alongside the popup on
+      // hover and said the same thing twice. aria-label still names the pin.
       el.setAttribute("aria-label", day ? `Day ${day}, stop ${position}: ${p.title}` : p.title);
-      el.title = day ? `Day ${day} · stop ${position} — ${p.title}` : p.title;
 
       const html = `<div class="fg-popup">
            ${p.imageUrl ? `<img src="${p.imageUrl}" alt="" loading="lazy">` : ""}

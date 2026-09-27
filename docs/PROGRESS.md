@@ -138,6 +138,36 @@ Assumptions made while writing these docs — correct any that are wrong.
 
 ## Session log
 
+### 2026-09-27 — Map popup in the house style, and the details panel slides
+Three fixes.
+
+**The duplicate hover text was the native tooltip.** Markers carried a `title` attribute from
+before they had popups; the browser rendered it alongside the popup, saying the same thing twice.
+Removed. `aria-label` still names each pin, so nothing is lost for screen readers.
+
+**The popup now uses the app's own language** rather than generic bold sans: the place name is set
+in Instrument Serif at 17px like every other place name in the app, the meta line is JetBrains Mono
+at 10px in ink-faint, and the shell matches the cards — 2px radius, a `--rule-strong` border,
+paper-raised, with a rule under the image.
+
+Colouring the tip took two goes and is worth recording. Matching it to the *border* seemed right by
+symmetry and looked plainly wrong: it becomes a contrasting nub hanging off the corner, glaring in
+dark mode where a light grey triangle sits against a dark popup. The tip matches the body fill
+instead, and all four `border-*-color` sides are set because MapLibre colours a different one
+depending on which anchor it chose.
+
+**The details panel slides.** It was two separate returns — a 40px rail or a 380px panel — so there
+was nothing for a transition to interpolate. It is now one `<aside>` whose width is transitioned,
+with the panel held at its full width inside `overflow-hidden` so it slides out of frame rather
+than reflowing its contents on every frame, and the rail cross-faded against it. Both buttons take
+`tabIndex={-1}` in the state where they are invisible, so the hidden one is not focusable.
+
+Measured across the transition: 420 → 252 → 160 → 101 → 65 → 46 → 40 closing, and
+40 → 208 → 300 → 359 → 395 → 414 → 420 opening — a real eased slide in both directions, not a jump.
+Reduced motion is already handled by the global `prefers-reduced-motion` block.
+
+Lint, 25 tests and build clean.
+
 ### 2026-09-27 — Map popup now stacks above the pins
 The popup rendered beneath surrounding markers. The markers carry an explicit `z-index` — 1
 normally, 10 while active — and the popup carried none, so any positioned marker outranked it.
