@@ -138,6 +138,30 @@ Assumptions made while writing these docs — correct any that are wrong.
 
 ## Session log
 
+### 2026-09-27 — Worker renamed to travel-agent-backend; CLAUDE.md refreshed
+Two workers existed: `ai-travel-concierge` (what wrangler.toml has always named, deployed
+2025-12-08) and `travel-agent-backend` (deployed 2026-03-16, and what the live frontend points at).
+`wrangler.toml` has never said `travel-agent-backend` in any commit, so that worker was created
+outside this repo's config.
+
+Prashanna chose to keep `travel-agent-backend`. Checking made that safe rather than risky:
+`/api/profile` served a live `USER_MEMORY` binding on it, which means the `v1` migration is already
+applied there, so re-declaring the tag is a no-op. Renamed in wrangler.toml and **removed
+`script_name`** from the Durable Object binding — it is only for binding a class defined in another
+worker, and after a rename it would have silently pointed at a different deployment. Local dev now
+reports `USER_MEMORY: UserMemory` instead of `(defined in ai-travel-concierge [not connected])`,
+so that was a latent fault, not just tidiness.
+
+`frontend/.env` already points at `travel-agent-backend`, so no frontend change is needed.
+
+**Delete `ai-travel-concierge` only after v2 is verified live** — deleting a worker is permanent and
+takes its Durable Object storage with it; until then it is a free rollback.
+
+Also refreshed `CLAUDE.md`, which still described seven deleted files, the three v1 endpoints,
+Unsplash and reflected CORS. It now carries the v2 map plus the traps that actually cost time here:
+the free-tier ceiling, `@theme inline` not emitting runtime variables, fonts belonging in
+index.html, MapLibre overwriting marker transforms, and partial-results-as-empty.
+
 ### 2026-09-26 — Removed v1; prepared v2 for release
 The frontend had stopped calling v1 entirely, so `/api/generate`, `/api/replace-highlight` and
 `/api/profile/:userId` were dead weight along with `workflow.ts`, `utils/prompts.ts`, `utils/plan.ts`

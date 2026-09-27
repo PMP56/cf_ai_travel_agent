@@ -1,4 +1,4 @@
-name = "ai-travel-concierge"
+name = "travel-agent-backend"
 main = "src/index.ts"
 compatibility_date = "2024-01-01"
 
@@ -8,8 +8,12 @@ binding = "AI"
 [[durable_objects.bindings]]
 name = "USER_MEMORY"
 class_name = "UserMemory"
-script_name = "ai-travel-concierge"
+# No script_name: the class is defined in this worker. Naming a script here
+# makes it a cross-script binding, which after a rename would silently point at
+# a different deployment.
 
+# Already applied to this script — /api/profile served a live USER_MEMORY
+# binding before the rename, so re-declaring the tag is a no-op.
 [[migrations]]
 tag = "v1"
 new_sqlite_classes = ["UserMemory"]
