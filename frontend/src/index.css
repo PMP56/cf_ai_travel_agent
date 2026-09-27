@@ -51,6 +51,12 @@
 }
 
 :root {
+  /* Tells the browser which palette to paint native controls with — select
+     popups, scrollbars, form widgets. Without it the day-picker dropdown
+     renders unreadable in dark mode, because that popup is drawn by the
+     platform and never sees our colours. */
+  color-scheme: light;
+
   /* Warm paper, near-black ink. Light mode is the default. */
   --paper: 40 24% 97%;
   --paper-raised: 40 30% 99%;
@@ -78,6 +84,8 @@
 }
 
 :root.dark {
+  color-scheme: dark;
+
   --paper: 30 8% 9%;
   --paper-raised: 30 7% 12%;
   --paper-sunken: 30 9% 6%;
@@ -144,6 +152,21 @@ body {
   font-weight: 400;
   letter-spacing: -0.015em;
   line-height: 1.02;
+}
+
+/* ---- Native select popups ----------------------------------------------
+   color-scheme above does the real work; these make the option list match our
+   palette exactly rather than the platform's default dark grey.
+   ----------------------------------------------------------------------- */
+
+select option {
+  background-color: hsl(var(--paper-raised));
+  color: hsl(var(--ink));
+}
+
+select optgroup {
+  background-color: hsl(var(--paper-raised));
+  color: hsl(var(--ink-faint));
 }
 
 /* ---- Accessibility ----------------------------------------------------- */
@@ -218,12 +241,18 @@ body {
 .maplibregl-ctrl-attrib {
   font-family: var(--font-mono) !important;
   font-size: 9px !important;
-  background: hsl(var(--paper) / 0.86) !important;
-  color: hsl(var(--ink-faint)) !important;
+  background: hsl(var(--paper) / 0.92) !important;
+  color: hsl(var(--ink)) !important;
 }
 
-.maplibregl-ctrl-attrib a {
-  color: hsl(var(--ink-soft)) !important;
+.maplibregl-ctrl-attrib a,
+.maplibregl-ctrl-attrib-button {
+  color: hsl(var(--ink)) !important;
+}
+
+/* The info "i" toggle is a dark SVG baked into the stylesheet. */
+:root.dark .maplibregl-ctrl-attrib-button {
+  filter: invert(1) brightness(1.6);
 }
 
 .maplibregl-ctrl-group {
@@ -235,6 +264,20 @@ body {
 
 .maplibregl-ctrl-group button + button {
   border-top: 1px solid hsl(var(--rule)) !important;
+}
+
+.maplibregl-ctrl-group button {
+  color: hsl(var(--ink)) !important;
+}
+
+/* The zoom +/- are background SVGs hard-coded to near-black, so they vanish on
+   a dark control. Invert them rather than shipping replacement icons. */
+:root.dark .maplibregl-ctrl-group button .maplibregl-ctrl-icon {
+  filter: invert(1) brightness(1.8);
+}
+
+.maplibregl-ctrl-group button:hover {
+  background: hsl(var(--paper-sunken)) !important;
 }
 
 /* ---- Map pins ----------------------------------------------------------

@@ -103,7 +103,7 @@ function IconButton({
       disabled={disabled}
       aria-label={label}
       title={label}
-      className="w-6 h-6 grid place-items-center rounded-xs border border-rule text-ink-faint hover:border-ink-faint hover:text-ink hover:bg-paper-sunken disabled:opacity-25 transition-colors"
+      className="w-6 h-6 grid place-items-center rounded-xs border border-rule text-ink-soft hover:border-ink-faint hover:text-ink hover:bg-paper-sunken disabled:opacity-25 transition-colors"
     >
       {children}
     </button>
@@ -187,7 +187,7 @@ function PlaceRow(props: {
                 const target = parseInt(e.target.value, 10);
                 if (Number.isFinite(target)) onMoveToDay(dayNumber, index, target);
               }}
-              className="figure h-6 bg-transparent border border-rule rounded-xs text-ink-faint hover:border-ink-faint hover:text-ink transition-colors px-1"
+              className="figure h-6 bg-paper border border-rule rounded-xs text-ink-soft hover:border-ink-faint hover:text-ink transition-colors px-1"
             >
               <option value="">day…</option>
               {Array.from({ length: dayCount }, (_, i) => i + 1)

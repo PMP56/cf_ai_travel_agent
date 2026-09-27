@@ -138,6 +138,23 @@ Assumptions made while writing these docs — correct any that are wrong.
 
 ## Session log
 
+### 2026-09-27 — Dark-mode contrast fixes
+Two reported: the day-picker dropdown was unreadable, and MapLibre's zoom and attribution text were
+grey on black.
+
+The dropdown had a root cause worth knowing. Select popups, scrollbars and form widgets are painted
+by the **browser**, not by our CSS, so none of our variables reach them — the fix is the
+`color-scheme` property on `:root` / `:root.dark`, which tells the engine which palette to paint
+with. Explicit `option` colours are belt and braces on top.
+
+MapLibre's zoom glyphs are background SVGs hard-coded to near-black, so they disappear on a dark
+control; they now get `filter: invert(1)` in dark. The attribution was set to our faintest ink and
+is now full ink.
+
+While auditing, the itinerary row controls measured about 3:1 against their card — under AA for
+small text — so they moved from ink-faint to ink-soft. Measured after: day select 7.11:1, dropdown
+options 14.55:1, attribution 15.82:1.
+
 ### 2026-09-27 — Live site was calling localhost; fixed the cause
 The deployed bundle had `http://localhost:8787` baked in, so every visitor's browser tried to reach
 their own machine. Caused by bad advice from me: I said `frontend/.env` already pointed at the

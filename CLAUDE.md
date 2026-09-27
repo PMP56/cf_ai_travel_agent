@@ -72,6 +72,10 @@ Unverified (need a Cloudflare login / network; ask before running):
   blanked every day badge and map pin once already — see `src/dayColour.ts`.
 - **Fonts are linked from `index.html`, not imported in CSS.** An `@import` inside `index.css` lands
   after Tailwind's output and CSS requires `@import` to come first, so the browser drops it.
+- **Native controls need `color-scheme`, not CSS.** Select popups, scrollbars and form widgets are
+  painted by the browser and never see our variables — `:root` / `:root.dark` set `color-scheme`,
+  which is what makes dropdowns readable in dark mode. MapLibre's zoom glyphs are hard-coded dark
+  SVGs and get `filter: invert(1)` in dark.
 - **MapLibre overwrites `transform` on marker elements** to position them. Anything transform-based
   on a marker root is clobbered; `.fg-pin` uses a pseudo-element pointer for that reason.
 - Partial results that look like empty ones have caused four separate bugs here (rate-limited
