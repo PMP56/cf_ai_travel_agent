@@ -25,7 +25,7 @@ import {
   ClimatePanelInline,
 } from "./components/Dossier";
 import InfoPanel from "./components/InfoPanel";
-import SurveyStrip from "./components/SurveyStrip";
+import DepartureBoard from "./components/DepartureBoard";
 
 /**
  * Workspace shell.
@@ -65,6 +65,8 @@ export default function App() {
   // context and must exist once, and place detail is a column on desktop but a
   // drawer on mobile.
   const isDesktop = useMediaQuery(DESKTOP_QUERY);
+  // The board drives itself from state, so it has to be told to stop.
+  const reducedMotion = useMediaQuery("(prefers-reduced-motion: reduce)");
   const [dark, setDark] = useTheme();
   const [hoveredPlace, setHoveredPlace] = useState<CuratedPlace | null>(null);
   const [activeDay, setActiveDay] = useState<number | null>(null);
@@ -155,9 +157,11 @@ export default function App() {
             <button
               type="button"
               onClick={plan.showSample}
-              className="figure mt-3 inline-flex items-center gap-1.5 px-2.5 py-1.5 border border-rule rounded-xs text-ink-soft hover:border-ink-faint hover:text-ink transition-colors"
+              className="figure mt-3 inline-flex items-start gap-1.5 text-left px-2.5 py-1.5 border border-rule rounded-xs text-ink-soft hover:border-ink-faint hover:text-ink transition-colors"
             >
-              <Eye className="w-3 h-3" aria-hidden />
+              {/* items-start, not items-center: on a narrow screen the label
+                  wraps to two lines and a centred icon floats away from it. */}
+              <Eye className="w-3 h-3 mt-0.5 shrink-0" aria-hidden />
               see a finished plan — no account, no waiting
             </button>
 
@@ -178,8 +182,8 @@ export default function App() {
           </div>
 
           {/* Anchors the foot of the page, which was a large empty area. */}
-          <div className="mt-auto">
-            <SurveyStrip />
+          <div className="mt-auto pb-10 pt-8">
+            <DepartureBoard reduced={reducedMotion} />
           </div>
         </main>
       ) : (

@@ -138,6 +138,33 @@ Assumptions made while writing these docs — correct any that are wrong.
 
 ## Session log
 
+### 2026-09-27 — Homepage animation: split-flap departure board
+Replaced the rejected route-plotting animation (`SurveyStrip.tsx`, deleted) with a split-flap
+departure board at the foot of the homepage. The first idea was judged basic and not meaningful;
+this one is unmistakably travel without a pictogram, is made of type like the rest of the page, and
+makes the product's own claim — each destination that lands is one the planner can build, and the
+coordinates locking in beneath it are the real ones the geocoder returns. Strictly monochrome, per
+instruction: the board uses only `--ink`, `--paper`, `--paper-sunken` and `--rule`.
+
+Two defects were found by looking rather than by reading the code:
+
+1. **Letters never settled** — the board spelled `K QVQBA` instead of `KYOTO`. The per-cell counter
+   conflated the stagger delay with the flap distance, so every cell advanced by delay + distance
+   and overshot. Split into two independent counters, and each character is now computed as
+   `start + elapsed step` rather than by mutating the previous frame, which also makes it immune to
+   StrictMode's double invocation.
+2. **The longest name was never readable** — a fixed 3.4s hold measured from the index change was
+   shorter than `EL CALAFATE`'s eleven-cell stagger plus flap travel, so the board turned over
+   mid-word. The dwell is now counted from the moment the board finishes spelling.
+
+Verified by sampling the live DOM over a full 40s cycle: all five destinations settle, ~4.3s each.
+Checked in light, dark, mobile (390px) and `prefers-reduced-motion`, which holds a static board.
+Also fixed the sample-plan button, whose centred icon floated away from its label when the text
+wrapped to two lines on mobile. Lint, 25 tests and build all clean.
+
+**Still undeployed.** Seven-plus frontend changes have accumulated, including the
+`.env.production` fix — until a deploy runs, the live site still calls each visitor's own machine.
+
 ### 2026-09-27 — Homepage animation: the survey strip
 The brief was "a bus drives in from the left, a plane takes off on the right". The instinct —
 movement at the foot of the page — was right, but the vocabulary would have fought the design: this

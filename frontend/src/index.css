@@ -378,165 +378,71 @@ select optgroup {
   color: hsl(var(--ink-faint));
 }
 
-/* ---- Homepage survey animation -----------------------------------------
-   A route plotting itself: contours drift, waypoints drop, the line draws,
-   a marker travels it. Cartography rather than clipart, so it sits inside the
-   editorial language of the page instead of fighting it.
+/* ---- Homepage departure board -------------------------------------------
+   Split-flap cells. Strictly ink on paper — no accent, no day colours: the
+   interest is meant to come from the mechanism and the type, not from hue.
 
-   Everything runs on transform / opacity / stroke-dashoffset so it stays on
-   the compositor. One 18s cycle, deliberately slow — it should be noticed on
-   the second look, not the first.
+   Each cell is a flap with a seam across its middle. A character remounts when
+   it changes, which replays the flip; the top half rotating down off its own
+   hinge is what sells it as mechanical rather than a crossfade.
    ----------------------------------------------------------------------- */
 
-.survey-strip {
-  --cycle: 18s;
-  mask-image: linear-gradient(to bottom, transparent, black 22%, black 88%, transparent);
+.departure-board {
+  perspective: 420px;
 }
 
-.survey-grid line {
-  stroke: hsl(var(--ink) / 0.075);
+.board-rule {
+  height: 1px;
+  background: hsl(var(--ink) / 0.14);
 }
 
-.survey-contour {
-  stroke: hsl(var(--ink) / 0.16);
+.flap-cell {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 0;
+  aspect-ratio: 3 / 4;
+  max-height: 84px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 2px;
+  background: hsl(var(--paper-sunken));
+  border: 1px solid hsl(var(--rule));
+  /* A little depth, as if the flap sits in a housing. */
+  box-shadow: inset 0 1px 0 hsl(var(--paper) / 0.6), inset 0 -2px 4px hsl(var(--ink) / 0.06);
 }
 
-/* Two speeds, so the terrain has depth rather than sliding as one sheet. */
-.survey-contour-1 {
-  animation: survey-drift 44s linear infinite;
-}
-.survey-contour-2 {
-  stroke: hsl(var(--ink) / 0.12);
-  animation: survey-drift 66s linear infinite reverse;
-}
-
-.survey-contour-3 {
-  stroke: hsl(var(--ink) / 0.08);
-  animation: survey-drift 88s linear infinite;
-}
-
-@keyframes survey-drift {
-  from { transform: translateX(0); }
-  to   { transform: translateX(-400px); }
-}
-
-/* The dashed route itself never animates — the mask over it does. */
-.survey-route {
-  stroke: hsl(var(--accent));
-  stroke-dasharray: 9 11;
-  opacity: 0;
-  animation: survey-route-fade var(--cycle) ease-in-out infinite;
-}
-
-@keyframes survey-route-fade {
-  0%, 6%    { opacity: 0; }
-  12%       { opacity: 0.85; }
-  88%       { opacity: 0.85; }
-  97%, 100% { opacity: 0; }
-}
-
-/* The reveal. A single 8%→58% segment, matched exactly by the traveller below,
-   so the mark always sits at the drawing tip rather than drifting behind it. */
-.survey-reveal {
-  stroke-dasharray: 1;
-  stroke-dashoffset: 1;
-  animation: survey-reveal var(--cycle) ease-in-out infinite;
-}
-
-@keyframes survey-reveal {
-  0%, 8%    { stroke-dashoffset: 1; }
-  58%, 100% { stroke-dashoffset: 0; }
-}
-
-/* Waypoints land as the pen passes them. */
-.survey-stop {
-  opacity: 0;
-  animation: survey-drop var(--cycle) ease-out infinite;
-  animation-delay: calc(var(--i) * 2.2s);
-}
-
-@keyframes survey-drop {
-  0%, 6%    { opacity: 0; transform: translateY(-7px) scale(0.5); }
-  12%       { opacity: 1; transform: translateY(0) scale(1.18); }
-  16%       { transform: translateY(0) scale(1); }
-  78%       { opacity: 1; transform: translateY(0) scale(1); }
-  90%, 100% { opacity: 0; transform: translateY(0) scale(1); }
-}
-
-.survey-stop-label {
+.flap-char {
   font-family: var(--font-mono);
-  font-size: 8px;
   font-weight: 500;
+  font-size: clamp(16px, 3.4vw, 34px);
+  line-height: 1;
+  color: hsl(var(--ink));
+  transform-origin: center top;
+  animation: flap-drop 130ms cubic-bezier(0.4, 0, 0.3, 1);
+  backface-visibility: hidden;
 }
 
-/* The climb-out. Drawn only after the ground route is complete, and only over
-   its last stretch, so it reads as departing rather than as part of the plan.
-   Its own reveal, offset so the visible portion is just the tail. */
-.survey-departure {
-  stroke: hsl(var(--accent));
-  stroke-dasharray: 5 9;
-  opacity: 0;
-  animation: survey-depart var(--cycle) ease-in-out infinite;
+@keyframes flap-drop {
+  0%   { transform: rotateX(-88deg); opacity: 0.25; }
+  55%  { opacity: 1; }
+  100% { transform: rotateX(0deg);   opacity: 1; }
 }
 
-@keyframes survey-depart {
-  0%, 56%   { opacity: 0; }
-  62%       { opacity: 0.45; }
-  84%       { opacity: 0.45; }
-  93%, 100% { opacity: 0; }
+/* The hinge line every split-flap has across its middle. */
+.flap-seam {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 1px;
+  background: hsl(var(--ink) / 0.16);
+  box-shadow: 0 1px 0 hsl(var(--paper) / 0.35);
+  pointer-events: none;
 }
 
-/* offset-path moves the marker along the exact route, so the two can never
-   drift out of sync the way separately-keyframed coordinates would. */
-.survey-traveller {
-  offset-path: path("M120,168 C200,148 270,116 340,120 C420,125 500,158 580,148 C670,137 740,96 820,94 C910,92 1010,120 1080,126 C1150,120 1205,88 1265,26");
-  /* auto turns the mark to face along the path — the difference between a dot
-     sitting on a line and something travelling it. */
-  offset-rotate: auto;
-  opacity: 0;
-  animation: survey-travel var(--cycle) ease-in-out infinite;
-}
-
-.survey-traveller path {
-  fill: hsl(var(--accent));
-}
-
-@keyframes survey-travel {
-  0%, 8%    { offset-distance: 0%;  opacity: 0; }
-  11%       { opacity: 1; }
-  /* 83% of the combined path is the ground route, reached exactly as the
-     reveal finishes — after that the mark climbs out and is gone. */
-  58%       { offset-distance: 83%; opacity: 1; }
-  70%       { offset-distance: 97%; opacity: 0.9; }
-  76%, 100% { offset-distance: 100%; opacity: 0; }
-}
-
-/* Reduced motion: show the finished survey, still and complete. */
 @media (prefers-reduced-motion: reduce) {
-  .survey-contour-1,
-  .survey-contour-2,
-  .survey-contour-3,
-  .survey-route,
-  .survey-departure,
-  .survey-stop,
-  .survey-traveller {
+  .flap-char {
     animation: none !important;
-  }
-  .survey-reveal {
-    animation: none !important;
-    stroke-dashoffset: 0;
-  }
-  .survey-route {
-    opacity: 0.85;
-  }
-  .survey-stop {
-    opacity: 1;
-    transform: none;
-  }
-  .survey-traveller {
-    opacity: 0;
-  }
-  .survey-departure {
-    opacity: 0.35;
   }
 }
