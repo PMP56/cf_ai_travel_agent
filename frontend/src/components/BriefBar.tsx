@@ -1,5 +1,5 @@
 import type { ResolvedPlace, TripBrief } from "../types";
-import EditableFact from "./EditableFact";
+import BriefField from "./BriefField";
 
 const MONTHS = [
   "January", "February", "March", "April", "May", "June",
@@ -35,7 +35,6 @@ export default function BriefBar({
   onEdit,
   busy,
 }: BriefBarProps) {
-  const unset = "not specified";
 
   return (
     <section
@@ -63,78 +62,95 @@ export default function BriefBar({
         )}
       </div>
 
-      <div
-        className={`grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-3 px-4 py-3 ${
-          busy ? "opacity-50 pointer-events-none" : ""
-        }`}
-      >
-        <EditableFact
-          label="duration"
-          value={brief.durationDays ? `${brief.durationDays} days` : null}
-          editValue={brief.durationDays ? String(brief.durationDays) : ""}
-          placeholder={unset}
-          inputMode="numeric"
-          onCommit={(raw) => {
-            const n = parseInt(raw, 10);
-            onEdit({ ...brief, durationDays: Number.isFinite(n) && n > 0 ? Math.min(n, 60) : null });
-          }}
-        />
-        <EditableFact
-          label="month"
-          value={brief.travelMonth}
-          placeholder={unset}
-          options={MONTHS}
-          onCommit={(raw) => {
-            const match = MONTHS.find((m) => m.toLowerCase() === raw.toLowerCase());
-            onEdit({ ...brief, travelMonth: match ?? null });
-          }}
-        />
-        <EditableFact
-          label="budget"
-          value={
-            brief.budget
-              ? `${brief.budget.amount.toLocaleString()} ${brief.budget.currency}`
-              : null
-          }
-          editValue={brief.budget ? String(brief.budget.amount) : ""}
-          placeholder={unset}
-          inputMode="numeric"
-          onCommit={(raw) => {
-            const n = parseInt(raw.replace(/[^0-9]/g, ""), 10);
-            onEdit({
-              ...brief,
-              budget:
-                Number.isFinite(n) && n > 0
-                  ? { amount: n, currency: brief.budget?.currency ?? "USD" }
-                  : null,
-            });
-          }}
-        />
-        <EditableFact
-          label="pace"
-          value={brief.pace}
-          placeholder={unset}
-          options={["relaxed", "moderate", "packed"]}
-          onCommit={(raw) =>
-            onEdit({
-              ...brief,
-              pace: (["relaxed", "moderate", "packed"] as const).find((p) => p === raw) ?? null,
-            })
-          }
-        />
+      {/* A control row, visually separated from the read-only metadata above it.
+          Every field carries its affordance at rest — the previous version only
+          revealed one on hover, so the brief read as a dashboard and needed a
+          caption telling people it was editable. */}
+      <div className="border-t border-rule bg-paper-sunken/30">
+        <div
+          className={`grid grid-cols-2 sm:grid-cols-4 gap-x-3 gap-y-3 px-4 py-3 ${
+            busy ? "opacity-50 pointer-events-none" : ""
+          }`}
+        >
+          <BriefField
+            kind="text"
+            label="duration"
+            noun="length"
+            suffix="days"
+            inputMode="numeric"
+            disabled={busy}
+            value={brief.durationDays ? String(brief.durationDays) : null}
+            editValue={brief.durationDays ? String(brief.durationDays) : ""}
+            onCommit={(raw) => {
+              const n = parseInt(raw, 10);
+              onEdit({
+                ...brief,
+                durationDays: Number.isFinite(n) && n > 0 ? Math.min(n, 60) : null,
+              });
+            }}
+          />
+
+          <BriefField
+            kind="choice"
+            label="month"
+            noun="month"
+            disabled={busy}
+            value={brief.travelMonth}
+            options={MONTHS}
+            onCommit={(raw) => {
+              const match = MONTHS.find((m) => m.toLowerCase() === raw.toLowerCase());
+              onEdit({ ...brief, travelMonth: match ?? null });
+            }}
+          />
+
+          <BriefField
+            kind="text"
+            label="budget"
+            noun="budget"
+            inputMode="numeric"
+            disabled={busy}
+            value={
+              brief.budget
+                ? `${brief.budget.amount.toLocaleString()} ${brief.budget.currency}`
+                : null
+            }
+            editValue={brief.budget ? String(brief.budget.amount) : ""}
+            onCommit={(raw) => {
+              const n = parseInt(raw.replace(/[^0-9]/g, ""), 10);
+              onEdit({
+                ...brief,
+                budget:
+                  Number.isFinite(n) && n > 0
+                    ? { amount: n, currency: brief.budget?.currency ?? "USD" }
+                    : null,
+              });
+            }}
+          />
+
+          <BriefField
+            kind="choice"
+            label="pace"
+            noun="pace"
+            disabled={busy}
+            value={brief.pace}
+            options={["relaxed", "moderate", "packed"]}
+            onCommit={(raw) =>
+              onEdit({
+                ...brief,
+                pace:
+                  (["relaxed", "moderate", "packed"] as const).find((p) => p === raw) ?? null,
+              })
+            }
+          />
+        </div>
+
+        {busy && (
+          <p className="figure text-accent px-4 pb-2.5 -mt-1">re-planning…</p>
+        )}
       </div>
 
-      <p className="figure text-ink-faint px-4 pb-2 -mt-1">
-        {busy ? "re-planning…" : "click any value to change it — the plan reconverges"}
-      </p>
-
       {(brief.interests.length > 0 || brief.constraints.length > 0 || brief.pace) && (
-        <div className="flex flex-wrap items-center gap-1.5 px-4 pb-3">
-          {brief.pace && (
-            <span className="figure px-1.5 py-0.5 border border-rule-strong rounded-xs text-ink-soft">
-              {brief.pace}
-            </span>
-          )}
+        <div className="flex flex-wrap items-center gap-1.5 px-4 py-3">
           {brief.interests.map((i) => (
             <span
               key={i}

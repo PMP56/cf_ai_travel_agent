@@ -138,6 +138,25 @@ Assumptions made while writing these docs — correct any that are wrong.
 
 ## Session log
 
+### 2026-09-27 — The brief reads as editable
+Feedback: the brief looked like an information dashboard, not something you could change. Correct —
+the affordance only appeared on hover, so at rest the values were indistinguishable from the
+read-only coordinates line above them, and a caption underneath had to explain that they were
+clickable. A control that needs a caption is not a control.
+
+`EditableFact` replaced by `BriefField`, which makes the affordance permanent and the *kind* of
+control visible before you touch it: month and pace are real `<select>`s with chevrons, which also
+buys keyboard behaviour and native pickers on mobile; duration and budget are chips that open an
+input. An unset field is now an invitation — "+ add budget" in accent, dashed border — rather than
+the words "not specified". The controls sit on a tinted band separated from the metadata, and the
+caption is gone.
+
+Also fixed an inconsistency of my own making: the climate chart's month picker was disabled in
+sample mode while the brief's was not. Both are live now — `replan()` clears `isSample`, so changing
+a month is the natural path from looking at the sample to actually using it.
+
+Verified all four fields are tab-reachable in visual order with proper labels.
+
 ### 2026-09-27 — Worker renamed to travel-agent-backend; CLAUDE.md refreshed
 Two workers existed: `ai-travel-concierge` (what wrangler.toml has always named, deployed
 2025-12-08) and `travel-agent-backend` (deployed 2026-03-16, and what the live frontend points at).

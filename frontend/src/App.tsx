@@ -217,10 +217,11 @@ export default function App() {
                   {result.climate && (
                     <ClimatePanel
                       climate={result.climate}
+                      // Enabled in sample mode too: the brief's own month picker
+                      // is, and replan() clears isSample, so changing a month is
+                      // the natural path from looking at the sample to using it.
                       onPickMonth={
-                        brief && !plan.isSample
-                          ? (month) => plan.replan({ ...brief, travelMonth: month }, place)
-                          : undefined
+                        brief ? (month) => plan.replan({ ...brief, travelMonth: month }, place) : undefined
                       }
                     />
                   )}
