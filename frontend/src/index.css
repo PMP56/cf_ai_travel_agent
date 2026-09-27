@@ -244,21 +244,27 @@ select optgroup {
 
 /* ---- MapLibre: strip its chrome back to our own language --------------- */
 
-.maplibregl-ctrl-attrib {
-  font-family: var(--font-mono) !important;
-  font-size: 9px !important;
-  background: hsl(var(--paper) / 0.92) !important;
-  color: hsl(var(--ink)) !important;
+/* OSM tiles are ODbL, so the credit stays — but as plain text rather than
+   MapLibre's white pill with an "i" toggle, and in the opposite corner from
+   the zoom controls. */
+.fg-attrib {
+  position: absolute;
+  left: 6px;
+  bottom: 5px;
+  z-index: 1;
+  padding: 2px 5px;
+  border-radius: 2px;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  line-height: 1.4;
+  text-decoration: none;
+  background: hsl(var(--paper) / 0.66);
+  color: hsl(var(--ink-faint));
 }
 
-.maplibregl-ctrl-attrib a,
-.maplibregl-ctrl-attrib-button {
-  color: hsl(var(--ink)) !important;
-}
-
-/* The info "i" toggle is a dark SVG baked into the stylesheet. */
-:root.dark .maplibregl-ctrl-attrib-button {
-  filter: invert(1) brightness(1.6);
+.fg-attrib:hover {
+  color: hsl(var(--ink));
+  background: hsl(var(--paper) / 0.92);
 }
 
 .maplibregl-ctrl-group {

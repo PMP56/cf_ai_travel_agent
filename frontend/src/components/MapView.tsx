@@ -28,7 +28,12 @@ interface MapViewProps {
   places: CuratedPlace[];
   hoveredPlace: CuratedPlace | null;
   activeDay: number | null;
+  /** Clicking a pin opens that place in the details panel. */
+  onSelectPlace?: (place: CuratedPlace) => void;
 }
+
+/** Long enough that sweeping the cursor across the map does not flash popups. */
+const HOVER_DELAY_MS = 260;
 
 const OSM_STYLE: StyleSpecification = {
   version: 8,
@@ -69,10 +74,26 @@ export default function MapView({
   places,
   hoveredPlace,
   activeDay,
+  onSelectPlace,
 }: MapViewProps) {
   const container = useRef<HTMLDivElement>(null);
   const map = useRef<InstanceType<typeof MapLibreMap> | null>(null);
   const markers = useRef<globalThis.Map<string, InstanceType<typeof Marker>>>(new globalThis.Map());
+
+  /* One popup shared by every pin rather than one bound per marker. Marker's own
+     `setPopup` binds a click-to-TOGGLE handler, which fights hover: the popup
+     would already be open when the click arrived, so clicking would shut it. */
+  const popup = useRef<InstanceType<typeof Popup> | null>(null);
+  const hoverTimer = useRef<number | undefined>(undefined);
+  /** Title whose popup was opened by a click; it survives pointer-leave. */
+  const pinned = useRef<string | null>(null);
+
+  // Held in a ref so the marker effect does not rebuild every pin whenever the
+  // parent re-renders with a fresh callback identity.
+  const onSelect = useRef(onSelectPlace);
+  useEffect(() => {
+    onSelect.current = onSelectPlace;
+  }, [onSelectPlace]);
 
   // Create once; never recreate on data change — rebuilding a GL context on
   // every render is both slow and visibly flickers.
@@ -84,15 +105,30 @@ export default function MapView({
       style: OSM_STYLE,
       center: [place.longitude, place.latitude],
       zoom: 11,
-      attributionControl: { compact: true },
+      // Replaced by our own quiet credit; see `.fg-attrib`.
+      attributionControl: false,
     });
 
     instance.addControl(new NavigationControl({ showCompass: false }), "top-right");
+    popup.current = new Popup({
+      offset: 20,
+      closeButton: false,
+      closeOnClick: false,
+      maxWidth: "240px",
+    });
+    // Clicking bare map dismisses a pinned popup.
+    instance.on("click", () => {
+      pinned.current = null;
+      popup.current?.remove();
+    });
     map.current = instance;
 
     // Capture the ref now: by cleanup time `markers.current` may point elsewhere.
     const activeMarkers = markers.current;
     return () => {
+      window.clearTimeout(hoverTimer.current);
+      popup.current?.remove();
+      popup.current = null;
       map.current?.remove();
       map.current = null;
       activeMarkers.clear();
@@ -132,23 +168,58 @@ export default function MapView({
         label.textContent = String(day);
         el.appendChild(label);
       }
-      el.setAttribute("role", "img");
+      // A pin is now an action, so it is reachable and operable by keyboard.
+      el.setAttribute("role", "button");
+      el.setAttribute("tabindex", "0");
       el.setAttribute("aria-label", day ? `Day ${day}, stop ${position}: ${p.title}` : p.title);
       el.title = day ? `Day ${day} · stop ${position} — ${p.title}` : p.title;
 
+      const html = `<div class="fg-popup">
+           ${p.imageUrl ? `<img src="${p.imageUrl}" alt="" loading="lazy">` : ""}
+           <div class="fg-popup-body">
+             <strong>${p.title.replace(/</g, "&lt;")}</strong>
+             ${day ? `<span>Day ${day} · stop ${position}</span>` : ""}
+           </div>
+         </div>`;
+
+      const show = () => {
+        const instance = map.current;
+        if (!instance || !popup.current) return;
+        popup.current.setLngLat([p.longitude, p.latitude]).setHTML(html).addTo(instance);
+      };
+
+      const open = () => {
+        window.clearTimeout(hoverTimer.current);
+        pinned.current = p.title;
+        show();
+        onSelect.current?.(p);
+      };
+
+      el.addEventListener("pointerenter", () => {
+        window.clearTimeout(hoverTimer.current);
+        hoverTimer.current = window.setTimeout(show, HOVER_DELAY_MS);
+      });
+      el.addEventListener("pointerleave", () => {
+        window.clearTimeout(hoverTimer.current);
+        // A popup opened by a click stays until the map is clicked.
+        if (pinned.current !== p.title) popup.current?.remove();
+      });
+      el.addEventListener("click", (event) => {
+        event.stopPropagation();
+        open();
+      });
+      el.addEventListener("keydown", (event) => {
+        if (event.key !== "Enter" && event.key !== " ") return;
+        event.preventDefault();
+        open();
+      });
+      el.addEventListener("focus", show);
+      el.addEventListener("blur", () => {
+        if (pinned.current !== p.title) popup.current?.remove();
+      });
+
       const marker = new Marker({ element: el, anchor: "bottom" })
         .setLngLat([p.longitude, p.latitude])
-        .setPopup(
-          new Popup({ offset: 18, closeButton: false, maxWidth: "240px" }).setHTML(
-            `<div class="fg-popup">
-               ${p.imageUrl ? `<img src="${p.imageUrl}" alt="" loading="lazy">` : ""}
-               <div class="fg-popup-body">
-                 <strong>${p.title.replace(/</g, "&lt;")}</strong>
-                 ${day ? `<span>Day ${day} · stop ${position}</span>` : ""}
-               </div>
-             </div>`
-          )
-        )
         .addTo(m);
 
       markers.current.set(p.title, marker);
@@ -173,11 +244,24 @@ export default function MapView({
   }, [hoveredPlace, activeDay, itinerary, places]);
 
   return (
-    <div
-      ref={container}
-      role="application"
-      aria-label={`Map of ${place.name}`}
-      className="w-full h-full bg-paper-sunken"
-    />
+    <div className="relative w-full h-full">
+      <div
+        ref={container}
+        role="application"
+        aria-label={`Map of ${place.name}`}
+        className="w-full h-full bg-paper-sunken"
+      />
+      {/* OSM tiles are ODbL: crediting them is a licence condition, not
+          decoration. This is the same credit as MapLibre's control, minus the
+          pill and the "i" toggle, and in the opposite corner. */}
+      <a
+        href="https://www.openstreetmap.org/copyright"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="fg-attrib"
+      >
+        © OpenStreetMap
+      </a>
+    </div>
   );
 }

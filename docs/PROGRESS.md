@@ -138,6 +138,39 @@ Assumptions made while writing these docs — correct any that are wrong.
 
 ## Session log
 
+### 2026-09-27 — Map: quiet attribution, hover popups, pin click opens the dossier
+Three changes to the map.
+
+**Attribution.** OSM tiles are ODbL and crediting them is a licence condition, so the credit could
+not simply go. MapLibre's control — a white pill with an "i" toggle in the corner — is replaced by
+`attributionControl: false` plus a plain `© OpenStreetMap` link styled as faint mono text in the
+opposite corner from the zoom buttons. Same credit, none of the chrome.
+
+**Popups on hover, after 260ms.** The delay matters: without it, sweeping the cursor across a
+cluster of pins flashes a popup per pin.
+
+**Pins are now actions.** Clicking one opens the place in the details panel via a new
+`onSelectPlace` prop wired to App's existing `selectPlace`, and pins the popup until the map is
+clicked. Because a pin is now interactive it also carries `role="button"`, `tabindex="0"` and
+Enter/Space handling, and shows its popup on focus.
+
+The bound-per-marker popup had to go. `Marker.setPopup` attaches a click-to-*toggle* handler, which
+fights hover directly: the popup is already open by the time the click lands, so clicking would
+shut it. One popup instance is now shared by every pin and driven explicitly. The select callback
+lives in a ref so a fresh callback identity from the parent does not rebuild every marker.
+
+Verified against the running app: attribution control absent, credit present, popup absent at 120ms
+and present after the delay, gone on pointer-leave, pinned through a leave after a click, details
+panel switching to the clicked place, and dismissed by a click on bare map.
+
+**Testing note worth keeping.** Two of those checks first came back wrong for reasons that had
+nothing to do with the code. The dismissal check failed because the synthetic click landed on the
+popup itself — it now computes a point provably clear of every pin, popup and control. Worse, the
+element under test appeared to be missing entirely: `localhost:5173` is a *stale* Vite server left
+running from earlier, serving a cached transform, and its sourcemap still contained the old JSX.
+This session's own server is on 5178 (5173-5177 were all taken). When a change seems not to have
+applied, check which server is answering before editing anything.
+
 ### 2026-09-27 — Map pin: one path, so the nib is outlined too
 The pin's head had a 2px paper border; its nib had none, because they were two
 shapes — a bordered circle plus a CSS border-triangle in `var(--pin)`.

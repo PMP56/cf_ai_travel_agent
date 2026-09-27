@@ -279,6 +279,7 @@ export default function App() {
                       places={places}
                       hoveredPlace={hoveredPlace}
                       activeDay={activeDay}
+                      onSelectPlace={selectPlace}
                     />
                   </Suspense>
                 </div>
@@ -365,6 +366,7 @@ export default function App() {
                     places={places}
                     hoveredPlace={hoveredPlace}
                     activeDay={activeDay}
+                    onSelectPlace={selectPlace}
                   />
                 </Suspense>
               ) : (
