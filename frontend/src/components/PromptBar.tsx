@@ -50,7 +50,11 @@ export default function PromptBar({ onSubmit, onCancel, running, compact }: Prom
 
   return (
     <div className="w-full">
-      <div className="flex items-end gap-2 border border-rule-strong bg-paper-raised rounded-sm px-3 py-2.5 focus-within:border-accent transition-colors">
+      <div
+        className={`prompt-shell flex items-end gap-2.5 border border-rule-strong bg-paper-raised rounded-sm transition-colors ${
+          compact ? "px-3 py-2.5" : "px-4 py-3.5"
+        }`}
+      >
         <label htmlFor="trip-prompt" className="sr-only">
           Describe your trip
         </label>
@@ -62,7 +66,14 @@ export default function PromptBar({ onSubmit, onCancel, running, compact }: Prom
           rows={compact ? 1 : 2}
           disabled={running}
           placeholder={compact ? "Change the trip…" : "Where are you going, and when?"}
-          className="flex-1 bg-transparent resize-none text-[14px] leading-relaxed placeholder:text-ink-faint focus:outline-none disabled:opacity-50"
+          /* focus-ring-none, not Tailwind's outline-none: the global
+             :focus-visible rule in index.css is unlayered, and unlayered CSS
+             beats anything in @layer utilities whatever its specificity, so the
+             utility could never win. The ring belongs to the shell anyway — a
+             highlighted box inside a highlighted box reads as a bug. */
+          className={`focus-ring-none flex-1 bg-transparent resize-none leading-relaxed placeholder:text-ink-faint disabled:opacity-50 ${
+            compact ? "text-[14px]" : "text-[16.5px]"
+          }`}
         />
 
         {running ? (
@@ -78,7 +89,9 @@ export default function PromptBar({ onSubmit, onCancel, running, compact }: Prom
             type="button"
             onClick={send}
             disabled={!value.trim()}
-            className="figure shrink-0 flex items-center gap-1.5 px-3 py-1.5 bg-ink text-paper rounded-xs disabled:opacity-25 hover:bg-accent transition-colors"
+            className={`figure shrink-0 flex items-center gap-1.5 bg-ink text-paper rounded-xs disabled:opacity-25 hover:bg-accent transition-colors ${
+              compact ? "px-3 py-1.5" : "px-3.5 py-2"
+            }`}
           >
             plan <ArrowRight className="w-3 h-3" aria-hidden />
           </button>

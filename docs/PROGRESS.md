@@ -138,6 +138,33 @@ Assumptions made while writing these docs — correct any that are wrong.
 
 ## Session log
 
+### 2026-09-27 — Prompt emphasis, shell focus ring, fainter animation
+Three changes to the cold-start screen.
+
+**The focus ring was a real bug, not a styling preference.** Clicking the prompt drew a tight blue
+rectangle around the textarea inside the bordered shell — a highlighted box inside a highlighted
+box. The textarea already carried Tailwind's `focus:outline-none` and had since it was written, so
+the obvious reading was that the utility simply was not applying. It was not:
+`index.css` defines an unlayered `:focus-visible { outline: 2px solid hsl(var(--accent)) }`, and
+**unlayered CSS beats anything in `@layer utilities` whatever its specificity** — which is where
+Tailwind v4 puts every utility. The utility could never have won.
+
+The codebase already had the right escape hatch for exactly this, `.focus-ring-none:focus-visible`,
+with a comment saying to use it only where a custom ring replaces the default. That is now the case:
+the shell takes `border-color: hsl(var(--ink))` plus a 3px ink ring on `:focus-within`. Ink rather
+than a literal white, because it resolves to white in dark mode where this was asked for, while a
+white ring on near-white paper in light mode would be invisible and fail contrast. Checked by
+tabbing: only the textarea opts out; the dark-mode toggle, all three example cards and the sample
+button keep their 2px accent ring.
+
+**The prompt now carries more weight** — taller (`py-3.5`), 16.5px text against 14px, a slightly
+larger submit button and a soft shadow lifting it off the page. The compact variant used in the
+working view is unchanged at 51px and 14px.
+
+**The animation drops to `opacity: 0.5`** (0.3 on phones), further back than the previous 0.66.
+
+Lint, 25 tests and build clean.
+
 ### 2026-09-27 — Centre the home page content block
 Removing the source tiles left the content top-aligned with a large void beneath it. The block is
 now vertically centred in the space between the masthead and the animation: 156px of breathing

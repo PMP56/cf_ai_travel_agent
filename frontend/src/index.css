@@ -420,7 +420,7 @@ select optgroup {
   color: hsl(var(--ink));
   /* Sit back into the page. At full strength the scene competed with the
      prompt above it; this keeps it as atmosphere. */
-  opacity: 0.66;
+  opacity: 0.5;
 }
 
 .road-band g[class^="road-"] {
@@ -501,7 +501,7 @@ select optgroup {
    the whole layer recede keeps that from reading as clutter. */
 @media (max-width: 767px) {
   .road-band {
-    opacity: 0.42;
+    opacity: 0.3;
   }
 }
 
@@ -515,4 +515,27 @@ select optgroup {
   .road-band * {
     animation: none !important;
   }
+}
+
+/* ---- The prompt shell ----------------------------------------------------
+   The prompt is the product's front door, so it sits slightly proud of the
+   cards around it and owns the focus ring.
+
+   The ring goes on the shell rather than the textarea. The browser's default
+   drew a tight rectangle around the text area alone, which reads as a box
+   highlighted inside a box; suppressing it there and lighting the whole shell
+   is what makes the control feel like one object.
+
+   hsl(var(--ink)), not a literal white: it resolves to white in dark mode,
+   where this was asked for, while in light mode a white ring on near-white
+   paper would be invisible and would fail contrast outright.
+   ----------------------------------------------------------------------- */
+
+.prompt-shell {
+  box-shadow: 0 1px 2px hsl(var(--ink) / 0.05), 0 6px 20px hsl(var(--ink) / 0.045);
+}
+
+.prompt-shell:focus-within {
+  border-color: hsl(var(--ink));
+  box-shadow: 0 0 0 3px hsl(var(--ink) / 0.16);
 }
