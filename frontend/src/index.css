@@ -297,13 +297,21 @@ select optgroup {
    is a bordered pseudo-element instead, so nothing depends on transform.
    ----------------------------------------------------------------------- */
 
+/* One path, so the outline runs unbroken around the head and down both sides
+   of the nib. A circle plus a separate triangle cannot share a continuous
+   stroke, which is why the nib used to have no border at all: outlining the
+   triangle on its own either painted a wedge over the head or notched its ring.
+   The nib meets the circle at its tangent points, so the join has no kink.
+
+   No `position` here on purpose: MapLibre's own .maplibregl-marker supplies
+   `position: absolute`, and overriding it detaches every marker from its
+   coordinate. */
 .fg-pin {
   width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  background: var(--pin);
-  border: 2px solid hsl(var(--paper));
-  box-shadow: 0 1px 5px hsl(var(--ink) / 0.35);
+  height: 30px;
+  box-sizing: border-box;
+  /* Reserve the nib so the label still centres in the head, not the whole pin. */
+  padding-bottom: 6px;
   display: grid;
   place-items: center;
   cursor: pointer;
@@ -312,31 +320,35 @@ select optgroup {
   font-weight: 500;
   font-variant-numeric: tabular-nums;
   color: hsl(var(--paper));
+  /* One shadow for the whole silhouette rather than one per piece. */
+  filter: drop-shadow(0 1px 4px hsl(var(--ink) / 0.35));
   transition: width 120ms ease, height 120ms ease, font-size 120ms ease;
 }
 
-/* The pointer, anchored below the circle. */
-.fg-pin::after {
-  content: "";
+.fg-pin svg {
   position: absolute;
-  top: 100%;
-  left: 50%;
-  margin-left: -4px;
-  margin-top: -2px;
-  border-left: 4px solid transparent;
-  border-right: 4px solid transparent;
-  border-top: 6px solid var(--pin);
-  filter: drop-shadow(0 1px 1px hsl(var(--ink) / 0.3));
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.fg-pin svg path {
+  fill: var(--pin);
+  stroke: hsl(var(--paper));
+  stroke-width: 2;
 }
 
 .fg-pin > span {
+  position: relative;
   line-height: 1;
   pointer-events: none;
 }
 
 .fg-pin-active {
   width: 32px;
-  height: 32px;
+  height: 40px;
+  padding-bottom: 8px;
   font-size: 13px;
   z-index: 10;
 }

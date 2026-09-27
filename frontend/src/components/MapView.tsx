@@ -52,6 +52,17 @@ function dayIndexFor(itinerary: Itinerary | null, place: CuratedPlace): number |
   return null;
 }
 
+/**
+ * The pin silhouette: the head and the nib as one path, so a single stroke can
+ * run all the way round. The nib springs from the circle's tangent points —
+ * (4.01, 19.56) and (19.99, 19.56) for r=11 about (12, 12) with the point at
+ * (12, 28) — which is what makes the join smooth rather than a corner.
+ */
+const PIN_SVG =
+  '<svg viewBox="0 0 24 30" aria-hidden="true" focusable="false">' +
+  '<path d="M4.01 19.56A11 11 0 1 1 19.99 19.56L12 28Z"/>' +
+  "</svg>";
+
 export default function MapView({
   place,
   itinerary,
@@ -113,6 +124,7 @@ export default function MapView({
       const el = document.createElement("div");
       el.className = "fg-pin";
       el.style.setProperty("--pin", colour);
+      el.insertAdjacentHTML("afterbegin", PIN_SVG);
       // Label with the DAY, not the stop index: colour already groups the pins,
       // and a map full of "1"s reads as noise. The stop order is in the popup.
       if (day) {

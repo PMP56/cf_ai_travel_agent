@@ -138,6 +138,34 @@ Assumptions made while writing these docs — correct any that are wrong.
 
 ## Session log
 
+### 2026-09-27 — Map pin: one path, so the nib is outlined too
+The pin's head had a 2px paper border; its nib had none, because they were two
+shapes — a bordered circle plus a CSS border-triangle in `var(--pin)`.
+
+Two obvious fixes were tried at 6x in a standalone harness and both failed visibly, which is why it
+is worth recording that they were tried: a larger paper triangle behind the coloured one paints a
+white wedge across the bottom of the head, because a pseudo-element renders over its parent's
+background and the triangle is at its widest exactly where it overlaps. A rotated square with two
+bordered edges — the usual tooltip-arrow trick — notches the head's ring on both sides of the nib
+and leaves a stray border segment inside it.
+
+The working answer is that a stroke cannot be continuous across two shapes. The pin is now a single
+SVG path: the head's major arc plus two lines to the point, stroked once. The nib springs from the
+circle's tangent points — (4.01, 19.56) and (19.99, 19.56) for r=11 about (12, 12) with the point
+at (12, 28) — so the join is smooth rather than a corner, and one `drop-shadow` now covers the whole
+silhouette instead of one per piece.
+
+Two things worth knowing for later. `.fg-pin` deliberately sets no `position`: MapLibre's own
+`.maplibregl-marker` supplies `position: absolute`, and overriding it detaches every marker from
+its coordinate. And `padding-bottom` reserves the nib so the day number still centres in the head
+rather than in the whole pin.
+
+The element is now 24×30 instead of 24×24, which also corrects the anchor: with `anchor: "bottom"`
+the nib used to hang 4px *below* the coordinate, and now points at it within about half a pixel.
+
+Verified on the sample plan in both themes: nine pins, stroke resolves to the paper colour, and
+MapLibre's `position: absolute` survives. Lint, 25 tests and build clean.
+
 ### 2026-09-27 — Renamed to Travel Agent; theme switch now lands in one wave
 Three changes.
 
