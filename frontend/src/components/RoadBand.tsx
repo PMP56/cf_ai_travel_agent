@@ -29,16 +29,26 @@ import { memo } from "react";
    is wide and shallow and the SVG is sliced rather than fitted: the container
    height sets the scale, and a wider window simply reveals more road. That
    keeps every object the same size on a phone and on a desktop. */
-const W = 2400;
-const H = 620;
-const LAND_Y = 484;   // horizon: landmarks stand here
-const ROAD_TOP = 492;
-const FAR_Y = 528;    // far lane, oncoming
-const CENTRE_Y = 552;
-const NEAR_Y = 596;   // near lane, our direction
+const W = 3000;
+/* Height matters more than it looks. The SVG is sliced, so the scale is
+   max(vw/W, bandHeight/H). Whenever the width term wins, the rendered scene is
+   taller than the band and the TOP is cropped — which silently ate the clouds
+   and aircraft at 620. Keeping H short enough that the height term always wins
+   means the full scene height always fits and only the width is cropped, which
+   is the harmless direction. It also scales everything UP rather than down.
+
+   W is wider than any window needs because the required band height scales with
+   vw * (H / W): a wider viewBox lowers that floor, and since the scale is
+   height-driven nothing gets smaller — only more road exists off to the sides. */
+const H = 460;
+const LAND_Y = 334;   // horizon: landmarks stand here
+const ROAD_TOP = 342;
+const FAR_Y = 372;    // far lane, oncoming
+const CENTRE_Y = 396;
+const NEAR_Y = 438;   // near lane, our direction
 // No near kerb: the road runs off the bottom of the window.
 
-const LANDMARK_SCALE = 1.5;
+const LANDMARK_SCALE = 1.25;
 
 const ink = {
   fill: "none",
@@ -453,8 +463,8 @@ const CLOUD_TILE = 1800;
 /* Spread through the sky above the rooftops. The band covers the lower part of
    the window, so this is the top of the scene rather than the top of the page. */
 const CLOUD_PLACEMENT: [number, number, number][] = [
-  [90, 170, 1.5], [360, 80, 1.2], [620, 250, 1.45], [880, 130, 1.7],
-  [1130, 210, 1.3], [1400, 60, 1.5], [1650, 285, 1.15],
+  [90, 156, 1.25], [360, 86, 1.0], [620, 196, 1.2], [880, 116, 1.4],
+  [1130, 172, 1.1], [1400, 74, 1.25], [1650, 205, 0.95],
 ];
 
 /** Dash period. Long enough that the markings do not strobe once moving. */
@@ -485,7 +495,7 @@ function RoadBand({ reduced = false }: { reduced?: boolean }) {
 
         <g style={{ opacity: 0.4 }}>
           <g className="road-bob-slow">
-            <g transform="translate(420 60) scale(1.5)">
+            <g transform="translate(420 58) scale(1.2)">
               <Birds s={0.85} />
             </g>
           </g>
@@ -495,26 +505,26 @@ function RoadBand({ reduced = false }: { reduced?: boolean }) {
             flies left is the same drawing mirrored, never the same drawing
             pointed the wrong way. */}
         <g className="road-fly-right" style={{ opacity: 0.75 }}>
-          <g transform="translate(0 120) scale(1.9)">
+          <g transform="translate(0 62) scale(1.5)">
             <Plane />
           </g>
         </g>
         <g className="road-fly-left" style={{ opacity: 0.5 }}>
-          <g transform="translate(0 175) scale(-1.5 1.5)">
+          <g transform="translate(0 112) scale(-1.3 1.3)">
             <Plane />
           </g>
         </g>
 
         <g className="road-drift-balloon-a" style={{ opacity: 0.68 }}>
           <g className="road-bob-a">
-            <g transform="translate(0 335) scale(1.8)">
+            <g transform="translate(0 212) scale(1.3)">
               <Balloon />
             </g>
           </g>
         </g>
         <g className="road-drift-balloon-b" style={{ opacity: 0.5 }}>
           <g className="road-bob-b">
-            <g transform="translate(0 290) scale(1.35)">
+            <g transform="translate(0 198) scale(0.9)">
               <Balloon />
             </g>
           </g>

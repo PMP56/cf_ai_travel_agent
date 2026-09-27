@@ -51,9 +51,12 @@
 }
 
 :root {
-  /* Height of the fixed homepage band. The page reserves this much room at
-     its foot so nothing hides behind it, and the band's own scale follows it. */
-  --band-h: clamp(230px, 38vh, 430px);
+  /* Height of the fixed homepage band, and with it the scale of the scene.
+     38% of the window, with a floor derived from the width: the SVG is sliced,
+     so the band must stay at least vw * (viewBoxH / viewBoxW) tall or the top
+     of the scene is cropped and the clouds lose their heads. That floor only
+     bites on unusually wide, short windows; everywhere else this is plain 38vh. */
+  --band-h: clamp(230px, max(38vh, 15.5vw), 560px);
   /* Tells the browser which palette to paint native controls with — select
      popups, scrollbars, form widgets. Without it the day-picker dropdown
      renders unreadable in dark mode, because that popup is drawn by the
@@ -434,8 +437,8 @@ select optgroup {
 
 /* Traffic crosses the full frame plus a margin at each end, so nothing ever
    pops into existence inside the view. */
-@keyframes road-left   { from { transform: translateX(2600px); } to { transform: translateX(-260px); } }
-@keyframes road-right  { from { transform: translateX(-260px); } to { transform: translateX(2600px); } }
+@keyframes road-left   { from { transform: translateX(3300px); } to { transform: translateX(-300px); } }
+@keyframes road-right  { from { transform: translateX(-300px); } to { transform: translateX(3300px); } }
 
 @keyframes road-bob    { 50% { transform: translateY(-7px); } }
 @keyframes road-bob-sm { 50% { transform: translateY(-4px); } }
@@ -458,18 +461,18 @@ select optgroup {
 
    Oncoming is quick, because its own speed and the camera's add together;
    our own lane only drifts, because we are overtaking it slowly. */
-.road-far-a { animation: road-left 26s linear   0s  infinite; }
-.road-far-b { animation: road-left 26s linear -13s  infinite; }
+.road-far-a { animation: road-left 32s linear    0s   infinite; }
+.road-far-b { animation: road-left 32s linear  -16s   infinite; }
 
-.road-near-a { animation: road-left 102s linear   0s  infinite; }
-.road-near-b { animation: road-left 102s linear -34s  infinite; }
-.road-near-c { animation: road-left 102s linear -68s  infinite; }
+.road-near-a { animation: road-left 128s linear   0s   infinite; }
+.road-near-b { animation: road-left 128s linear -42.7s infinite; }
+.road-near-c { animation: road-left 128s linear -85.3s infinite; }
 
-.road-fly-right { animation: road-right 52s linear -14s infinite; }
-.road-fly-left  { animation: road-left  70s linear -38s infinite; }
+.road-fly-right { animation: road-right 62s linear -17s infinite; }
+.road-fly-left  { animation: road-left  84s linear -46s infinite; }
 
-.road-drift-balloon-a { animation: road-left 290s linear  -60s infinite; }
-.road-drift-balloon-b { animation: road-left 400s linear -230s infinite; }
+.road-drift-balloon-a { animation: road-left 348s linear  -72s infinite; }
+.road-drift-balloon-b { animation: road-left 480s linear -276s infinite; }
 
 .road-bob-a    { animation: road-bob     7s ease-in-out infinite; }
 .road-bob-b    { animation: road-bob-sm  5.5s ease-in-out infinite; }

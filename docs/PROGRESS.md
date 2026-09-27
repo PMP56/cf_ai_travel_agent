@@ -138,6 +138,38 @@ Assumptions made while writing these docs — correct any that are wrong.
 
 ## Session log
 
+### 2026-09-27 — Road band: fix the top-cropping, scale up rather than down
+Shrinking the band to the lower third cropped the top of the scene instead of fitting it — the
+clouds and aircraft lost their heads. The cause was arithmetic, not layout.
+
+The SVG is sliced, so the scale is `max(vw/W, bandHeight/H)`. **Whenever the width term wins, the
+rendered scene is taller than the band and the excess is cut off the top** (yMax pins the bottom).
+With H at 620 the width term won at almost every size: about 10px lost at 1512×1000 and 116px at
+1920 wide. Measured, not guessed — a check now asserts across eleven viewport sizes that no sky
+layer's top sits above the band's top.
+
+Two changes make the height term always win, which is the harmless direction because it means the
+full scene height fits and only the width is cropped:
+
+- **H down from 620 to 460**, which also scales everything *up*: 0.83 instead of 0.63 at
+  1512×1000, so the skyline is 91px rather than 83px and the vehicles are correspondingly larger.
+  Landmark scale came down to 1.25 to buy the sky its room back, netting out larger on screen.
+- **W up from 2400 to 3000.** The required band height is `vw * H / W`, so a wider viewBox lowers
+  the floor. Nothing shrinks — the scale is height-driven — there is simply more road off to the
+  sides. This is what got the 32:9 ultrawide case clean without a band taking half the window.
+
+`--band-h` is `clamp(230px, max(38vh, 15.5vw), 560px)`. The `15.5vw` floor is that same
+`vw * H / W` condition expressed in CSS; it only engages on unusually wide, short windows and
+everywhere else this is plain 38vh. Traffic timings were rescaled by 1.2 for the longer crossing so
+apparent speeds are unchanged.
+
+Verified clean at 1512×1000, 1920×1080, 1440×720, 2560×1400, 2560×1080, 3440×1200, 1280×800,
+1366×768, 390×844, 768×1024 and 1024×600: no clipping, no document scroll, band at 38% everywhere
+except the 32:9 case at 44%. Sky objects were given separate horizontal bands so a plane and a
+balloon cannot merge; worst remaining overlap is 5px between the two balloons, which occludes
+cleanly. Reduced motion static, prompt still clickable through the layer. Lint, 25 tests, build
+clean.
+
 ### 2026-09-27 — Road band: back to the lower third
 The previous change made the scene a full-viewport layer to give the sky room. That overshot what
 was asked: the animation should sit in the lower part of the window, not behind the whole page.
