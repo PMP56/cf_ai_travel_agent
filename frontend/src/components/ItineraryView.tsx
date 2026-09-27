@@ -14,6 +14,7 @@ import {
   Hourglass,
   Repeat2,
   X,
+  ExternalLink,
 } from "lucide-react";
 import type { CuratedPlace, Itinerary } from "../types";
 import { dayColour } from "../dayColour";
@@ -36,6 +37,9 @@ interface ItineraryViewProps {
   itinerary: Itinerary;
   activeDay: number | null;
   unused: CuratedPlace[];
+  /** The place whose detail panel is open, if any. */
+  selectedPlace: CuratedPlace | null;
+  onSelect: (place: CuratedPlace) => void;
   onHoverPlace: (place: CuratedPlace | null) => void;
   onFocusDay: (day: number | null) => void;
   onReorder: (day: number, index: number, direction: -1 | 1) => void;
@@ -118,6 +122,8 @@ function PlaceRow(props: {
   isFirst: boolean;
   isLast: boolean;
   unused: CuratedPlace[];
+  isSelected: boolean;
+  onSelect: (place: CuratedPlace) => void;
   onHover: (p: CuratedPlace | null) => void;
   onReorder: (day: number, index: number, direction: -1 | 1) => void;
   onMoveToDay: (day: number, index: number, toDay: number) => void;
@@ -125,8 +131,8 @@ function PlaceRow(props: {
   onSwap: (day: number, index: number, replacement: CuratedPlace) => void;
 }) {
   const {
-    place, index, dayNumber, dayCount, isFirst, isLast, unused,
-    onHover, onReorder, onMoveToDay, onRemove, onSwap,
+    place, index, dayNumber, dayCount, isFirst, isLast, unused, isSelected,
+    onSelect, onHover, onReorder, onMoveToDay, onRemove, onSwap,
   } = props;
   const [showSwap, setShowSwap] = useState(false);
 
@@ -136,18 +142,35 @@ function PlaceRow(props: {
       onMouseEnter={() => onHover(place)}
       onMouseLeave={() => onHover(null)}
     >
-      <div className="flex gap-3 py-3 px-3 -mx-3 rounded-sm hover:bg-paper-sunken/60 transition-colors">
+      <div
+        className={`flex gap-3 py-3 px-3 -mx-3 rounded-sm transition-colors ${
+          isSelected ? "bg-accent/8 ring-1 ring-accent/30" : "hover:bg-paper-sunken/60"
+        }`}
+      >
         <PlaceThumb place={place} />
 
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-2">
+            <button
+              type="button"
+              onClick={() => onSelect(place)}
+              aria-label={`Show details for ${place.title}`}
+              className={`text-[14.5px] font-medium leading-snug text-left underline-offset-2 hover:underline transition-colors ${
+                isSelected ? "text-accent underline" : "hover:text-accent"
+              }`}
+            >
+              {place.title}
+            </button>
             <a
               href={place.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-[14.5px] font-medium leading-snug hover:text-accent underline-offset-2 hover:underline"
+              onClick={(e) => e.stopPropagation()}
+              aria-label={`${place.title} on Wikipedia`}
+              title="Open on Wikipedia"
+              className="shrink-0 text-ink-faint hover:text-accent transition-colors mt-0.5"
             >
-              {place.title}
+              <ExternalLink className="w-3 h-3" aria-hidden />
             </a>
             <span
               className="figure text-ink-faint shrink-0 pt-0.5"
@@ -237,7 +260,7 @@ function PlaceRow(props: {
 }
 
 export default function ItineraryView({
-  itinerary, activeDay, unused, onHoverPlace, onFocusDay,
+  itinerary, activeDay, unused, selectedPlace, onSelect, onHoverPlace, onFocusDay,
   onReorder, onMoveToDay, onRemove, onSwap,
 }: ItineraryViewProps) {
   return (
@@ -291,6 +314,8 @@ export default function ItineraryView({
                     isFirst={i === 0}
                     isLast={i === day.places.length - 1}
                     unused={unused}
+                    isSelected={selectedPlace?.title === place.title}
+                    onSelect={onSelect}
                     onHover={onHoverPlace}
                     onReorder={onReorder}
                     onMoveToDay={onMoveToDay}

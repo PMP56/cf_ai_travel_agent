@@ -393,3 +393,10 @@ export function CritiquePanel({ critique }: { critique: Critique }) {
     </Panel>
   );
 }
+
+/**
+ * Below `lg` there is no third column, so the context panels render inline in
+ * the main column instead. Same components, re-exported under names that make
+ * the call sites in App.tsx say which layout they belong to.
+ */
+export { DestinationPanel as DestinationPanelInline, ClimatePanel as ClimatePanelInline };

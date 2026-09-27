@@ -17,11 +17,12 @@ import ItineraryView from "./components/ItineraryView";
 const MapView = lazy(() => import("./components/MapView"));
 import PromptBar from "./components/PromptBar";
 import {
-  ClimatePanel,
   CritiquePanel,
-  DestinationPanel,
   FoodPanel,
+  DestinationPanelInline,
+  ClimatePanelInline,
 } from "./components/Dossier";
+import InfoPanel from "./components/InfoPanel";
 
 /**
  * Workspace shell.
@@ -65,6 +66,34 @@ export default function App() {
   // Tying them to a base rather than clearing them in an effect means a new
   // plan supersedes them during render, with no extra pass.
   const [edit, setEdit] = useState<{ base: unknown; itinerary: Itinerary } | null>(null);
+
+  /** Which place the detail panel is showing, if any. */
+  const [selectedPlace, setSelectedPlace] = useState<CuratedPlace | null>(null);
+
+  // Remembered, because three columns is a lot on a 1280px screen and the
+  // preference is personal rather than per-trip.
+  const [infoCollapsed, setInfoCollapsed] = useState(() => {
+    try {
+      return localStorage.getItem("infoPanel") === "collapsed";
+    } catch {
+      return false;
+    }
+  });
+
+  const setCollapsed = (next: boolean) => {
+    setInfoCollapsed(next);
+    try {
+      localStorage.setItem("infoPanel", next ? "collapsed" : "open");
+    } catch {
+      // Not remembering the preference is not worth breaking over.
+    }
+  };
+
+  /** Clicking a place opens the panel if it was collapsed. */
+  const selectPlace = (place: CuratedPlace) => {
+    setSelectedPlace(place);
+    if (infoCollapsed) setCollapsed(false);
+  };
 
   const { result, brief, place, running } = plan;
   // `error` belongs here. Without it a failed run cleared `running` while brief
@@ -143,9 +172,9 @@ export default function App() {
         </main>
       ) : (
         /* ---- Working view ---- */
-        <main className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(360px,460px)]">
+        <main className="flex-1 min-h-0 flex">
           {/* Dossier column */}
-          <div className="min-h-0 overflow-y-auto border-r border-rule">
+          <div className="flex-1 min-w-0 min-h-0 overflow-y-auto border-r border-rule">
             <div className="max-w-[900px] mx-auto px-5 py-4 space-y-5">
               <PromptBar
                 onSubmit={plan.submit}
@@ -208,31 +237,13 @@ export default function App() {
                 />
               </div>
 
-              {/* Context comes BEFORE the itinerary. Weather and the character of
-                  the place are what you check before reading day one, and at the
-                  foot of the page they sat behind five day cards. */}
-              {result && (result.destination || result.climate) && (
-                <div className="grid lg:grid-cols-2 gap-3">
-                  {result.destination && <DestinationPanel brief={result.destination} />}
-                  {result.climate && (
-                    <ClimatePanel
-                      climate={result.climate}
-                      // Enabled in sample mode too: the brief's own month picker
-                      // is, and replan() clears isSample, so changing a month is
-                      // the natural path from looking at the sample to using it.
-                      onPickMonth={
-                        brief ? (month) => plan.replan({ ...brief, travelMonth: month }, place) : undefined
-                      }
-                    />
-                  )}
-                </div>
-              )}
-
               {itinerary && (
                 <ItineraryView
                   itinerary={itinerary}
                   activeDay={activeDay}
                   unused={unused}
+                  selectedPlace={selectedPlace}
+                  onSelect={selectPlace}
                   onHoverPlace={setHoveredPlace}
                   onFocusDay={setActiveDay}
                   onReorder={(d, i, dir) => applyEdit(reorderWithinDay(itinerary, d, i, dir))}
@@ -241,6 +252,11 @@ export default function App() {
                   onSwap={(d, i, r) => applyEdit(swapPlace(itinerary, d, i, r))}
                 />
               )}
+
+              <div className="lg:hidden space-y-3">
+                {result?.destination && <DestinationPanelInline brief={result.destination} />}
+                {result?.climate && <ClimatePanelInline climate={result.climate} />}
+              </div>
 
               {result && (result.food || result.critique) && (
                 <div className="grid lg:grid-cols-2 gap-3">
@@ -257,8 +273,20 @@ export default function App() {
             </div>
           </div>
 
+          <InfoPanel
+            result={result}
+            itinerary={itinerary}
+            selectedPlace={selectedPlace}
+            collapsed={infoCollapsed}
+            onToggle={() => setCollapsed(!infoCollapsed)}
+            onClearSelection={() => setSelectedPlace(null)}
+            onPickMonth={
+              brief ? (month) => plan.replan({ ...brief, travelMonth: month }, place) : undefined
+            }
+          />
+
           {/* Map + telemetry rail */}
-          <aside className="hidden lg:flex flex-col min-h-0">
+          <aside className="hidden lg:flex flex-col min-h-0 w-[380px] xl:w-[420px] shrink-0">
             <div className="flex-1 min-h-0 relative">
               {place ? (
                 <Suspense

@@ -138,6 +138,32 @@ Assumptions made while writing these docs — correct any that are wrong.
 
 ## Session log
 
+### 2026-09-27 — Third column: a details panel
+Added a collapsible middle column between the plan and the map, so the reading order is now
+*what* (itinerary) → *about what* (details) → *where* (map). "The place" and the weather moved into
+it out of the main column, where they sat below five day cards and were rarely reached.
+
+It has two modes. By default it shows that context; clicking a place name in the itinerary switches
+it to a dossier for that place — hero image, which day and stop it falls on, the measured facts
+(category, pageviews/day, distance from centre, coordinates), a Wikipedia link, the **full** intro
+extract rather than the two-sentence version the prompt gets, and a captioned gallery.
+
+The extra detail is fetched **client-side, directly from Wikipedia**. It serves
+`Access-Control-Allow-Origin: *`, so going through the worker would add a hop and rate-limit
+pressure for nothing, and no model is involved either way — opening the panel costs nothing against
+the seven-plans-a-day ceiling. Two endpoints, because neither suffices alone: the action API for the
+extract, and the REST `media-list` for the gallery. `prop=images` returns every file on a page —
+Commons logos, flag icons, a location map, an unrelated photo of a French garden — while media-list
+returns only what the article displays, in order, with captions.
+
+The place title became a button rather than a link, so a small external-link icon stays in the row
+to preserve that affordance. Collapse state persists in localStorage; clicking a place while
+collapsed expands the panel. Below `lg` there is no third column and the context panels render
+inline instead.
+
+Verified: mode switching, back-to-overview, collapse persistence across reload, click-while-collapsed,
+and dark mode.
+
 ### 2026-09-27 — Dark-mode contrast fixes
 Two reported: the day-picker dropdown was unreadable, and MapLibre's zoom and attribution text were
 grey on black.
