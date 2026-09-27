@@ -53,7 +53,7 @@
 :root {
   /* Height of the fixed homepage band. The page reserves this much room at
      its foot so nothing hides behind it, and the band's own scale follows it. */
-  --band-h: clamp(148px, 21vh, 232px);
+  --band-h: clamp(230px, 38vh, 430px);
   /* Tells the browser which palette to paint native controls with — select
      popups, scrollbars, form widgets. Without it the day-picker dropdown
      renders unreadable in dark mode, because that popup is drawn by the
@@ -401,14 +401,17 @@ select optgroup {
    pointer-events: none so a decorative band can never swallow a click, and the
    gradient gives it an opaque floor that occludes anything scrolling behind it
    while keeping the sky edge soft rather than a ruled line. */
-/* The whole scene is a fixed background layer: road pinned to the foot of the
-   window and sky filling everything above it, so clouds and balloons sit behind
-   the page rather than being squeezed into a strip above the rooftops.
+/* A fixed background layer across the lower part of the window: road pinned to
+   the foot, sky above it with room for the clouds and balloons to read as sky
+   rather than slivers above the rooftops. It stops well short of the headline.
 
    pointer-events: none so a decorative layer can never swallow a click. */
 .road-band {
   position: fixed;
-  inset: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: var(--band-h);
   z-index: 0;
   pointer-events: none;
   color: hsl(var(--ink));

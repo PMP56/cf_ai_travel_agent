@@ -30,12 +30,12 @@ import { memo } from "react";
    height sets the scale, and a wider window simply reveals more road. That
    keeps every object the same size on a phone and on a desktop. */
 const W = 2400;
-const H = 1600;
-const LAND_Y = 1484;  // horizon: landmarks stand here
-const ROAD_TOP = 1492;
-const FAR_Y = 1528;   // far lane, oncoming
-const CENTRE_Y = 1550;
-const NEAR_Y = 1596;  // near lane, our direction
+const H = 620;
+const LAND_Y = 484;   // horizon: landmarks stand here
+const ROAD_TOP = 492;
+const FAR_Y = 528;    // far lane, oncoming
+const CENTRE_Y = 552;
+const NEAR_Y = 596;   // near lane, our direction
 // No near kerb: the road runs off the bottom of the window.
 
 const LANDMARK_SCALE = 1.5;
@@ -450,11 +450,11 @@ const LAND_PLACEMENT = [
 ] as const;
 
 const CLOUD_TILE = 1800;
-/* Spread up the full height of the window, so they read as sky behind the
-   page rather than a strip squeezed above the rooftops. */
+/* Spread through the sky above the rooftops. The band covers the lower part of
+   the window, so this is the top of the scene rather than the top of the page. */
 const CLOUD_PLACEMENT: [number, number, number][] = [
-  [90, 790, 1.5], [360, 560, 1.2], [620, 1060, 1.45], [880, 660, 1.7],
-  [1130, 920, 1.3], [1400, 520, 1.5], [1650, 1180, 1.15],
+  [90, 170, 1.5], [360, 80, 1.2], [620, 250, 1.45], [880, 130, 1.7],
+  [1130, 210, 1.3], [1400, 60, 1.5], [1650, 285, 1.15],
 ];
 
 /** Dash period. Long enough that the markings do not strobe once moving. */
@@ -485,7 +485,7 @@ function RoadBand({ reduced = false }: { reduced?: boolean }) {
 
         <g style={{ opacity: 0.4 }}>
           <g className="road-bob-slow">
-            <g transform="translate(420 1010) scale(1.5)">
+            <g transform="translate(420 60) scale(1.5)">
               <Birds s={0.85} />
             </g>
           </g>
@@ -495,26 +495,26 @@ function RoadBand({ reduced = false }: { reduced?: boolean }) {
             flies left is the same drawing mirrored, never the same drawing
             pointed the wrong way. */}
         <g className="road-fly-right" style={{ opacity: 0.75 }}>
-          <g transform="translate(0 1120) scale(1.9)">
+          <g transform="translate(0 120) scale(1.9)">
             <Plane />
           </g>
         </g>
         <g className="road-fly-left" style={{ opacity: 0.5 }}>
-          <g transform="translate(0 1300) scale(-1.5 1.5)">
+          <g transform="translate(0 175) scale(-1.5 1.5)">
             <Plane />
           </g>
         </g>
 
         <g className="road-drift-balloon-a" style={{ opacity: 0.68 }}>
           <g className="road-bob-a">
-            <g transform="translate(0 1330) scale(1.8)">
+            <g transform="translate(0 335) scale(1.8)">
               <Balloon />
             </g>
           </g>
         </g>
         <g className="road-drift-balloon-b" style={{ opacity: 0.5 }}>
           <g className="road-bob-b">
-            <g transform="translate(0 1160) scale(1.35)">
+            <g transform="translate(0 290) scale(1.35)">
               <Balloon />
             </g>
           </g>

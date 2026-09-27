@@ -138,6 +138,24 @@ Assumptions made while writing these docs — correct any that are wrong.
 
 ## Session log
 
+### 2026-09-27 — Road band: back to the lower third
+The previous change made the scene a full-viewport layer to give the sky room. That overshot what
+was asked: the animation should sit in the lower part of the window, not behind the whole page.
+
+The band is now `height: var(--band-h)` at `clamp(230px, 38vh, 430px)`, pinned to the bottom, and
+the viewBox is 2400×620 — an aspect chosen so that `max(vw/2400, bandH/620)` lands on the same
+scale from either term at typical window sizes, meaning the scene neither crops hard vertically nor
+shrinks. The sky (clouds, aircraft, balloons) occupies viewBox y 60–340 above the rooftops at 484,
+which is real room without reaching the headline.
+
+Page padding is now `calc(var(--band-h) * 0.54)` rather than the full band height. Only the
+skyline-and-road part needs clearing, not the sky above it; matching the full height pushed the
+content into an unnecessary internal scroll. Tying it to `--band-h` means the clearance follows the
+band if the height ever changes.
+
+Verified the band covers the lower 38% at 1512×1000 and 390×844, with no document scroll at either.
+Lint, 25 tests and build clean.
+
 ### 2026-09-27 — Road band: sky behind the page, and realistic vehicles
 Two faults reported: the clouds and balloons looked gone, and the vehicles looked cartoonish.
 
