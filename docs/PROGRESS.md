@@ -138,6 +138,44 @@ Assumptions made while writing these docs — correct any that are wrong.
 
 ## Session log
 
+### 2026-09-27 — Homepage animation: orbit band (replaces the departure board)
+The split-flap board worked but was judged not to fit. Prashanna supplied a reference —
+[Jose Aguinaga's "Travel Animation"](https://codepen.io/loic_album/pen/aZEWNg) — and chose its
+*mechanism* in the app's own ink rather than its look, and the existing bottom-strip placement.
+
+The reference is unusually economical and worth recording: one Illustrator SVG, no JavaScript, no
+library, and only two real keyframes — rotate 0→360 and its mirror. Every group shares
+`transform-origin: 200px 200px` and turns about it at a different duration and sign
+(`#countryObjects` 240s, `#floatingGlobe` 360s reversed, planes 60s, arcs 12s/24s alternating,
+`#windmill` 2s on its own origin). All the richness is the speed differential.
+
+`OrbitBand.tsx` reproduces that exactly: a globe centred at (440, 560) with r=420, eighteen
+line-drawn landmarks standing off the arc, two dashed interior tracks, two planes, a balloon and
+bobbing weather — seven layers, seven durations, one origin. Monochrome, per the standing
+instruction; the reference's flat colour would read as a different product under an engraving.
+
+Four things had to be corrected by looking:
+
+- **The band rendered 550px tall.** The SVG had `w-full` with no max-width, so it scaled to the
+  full 1512px viewport. Constrained to `max-w-[880px]`, giving 880×308.
+- **Twelve landmarks left the dome half empty** — only about a third of the ring is ever in frame.
+  Raised to eighteen at 20°, which puts five or six on screen.
+- **The Duomo's lantern floated detached above its dome.** A quadratic reaches only halfway to its
+  control point, so `Q0 -64` peaks at y=-47; the lantern had been placed at -64.
+- **Landmarks were sliced by a hard vertical cut** at the frame edge. A `mask-image` gradient fades
+  the outer 8% so they go over the horizon instead.
+
+`transform-box: view-box` is the load-bearing line: without it each group resolves
+`transform-origin` against its own bounding box and spins in place instead of about the globe.
+
+Verified by measuring each layer's rotation over six seconds — ring +10.3°, tracks +63.5°/+22.5°,
+planes +45.0°/+27.7°, balloon −16.9°, sails 1.76 turns — all matching their declared durations.
+Checked light, dark, mobile (390px) and `prefers-reduced-motion`, which holds everything still.
+Lint, 25 tests and build clean. `DepartureBoard.tsx` and its CSS are deleted.
+
+**Still undeployed.** Eight-plus frontend changes have accumulated, including the
+`.env.production` fix — until a deploy runs, the live site still calls each visitor's own machine.
+
 ### 2026-09-27 — Homepage animation: split-flap departure board
 Replaced the rejected route-plotting animation (`SurveyStrip.tsx`, deleted) with a split-flap
 departure board at the foot of the homepage. The first idea was judged basic and not meaningful;
