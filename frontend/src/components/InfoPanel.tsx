@@ -1,5 +1,5 @@
-import { PanelRightClose, PanelRightOpen, Info } from "lucide-react";
-import type { CuratedPlace, Itinerary, PlanResult } from "../types";
+import { PanelRightClose, PanelRightOpen, Info, Clock } from "lucide-react";
+import type { CuratedPlace, Itinerary, PlanResult, ResolvedPlace } from "../types";
 import { ClimatePanel, DestinationPanel } from "./Dossier";
 import PlaceDetail from "./PlaceDetail";
 
@@ -19,6 +19,7 @@ interface InfoPanelProps {
   result: PlanResult | null;
   itinerary: Itinerary | null;
   selectedPlace: CuratedPlace | null;
+  place: ResolvedPlace | null;
   collapsed: boolean;
   onToggle: () => void;
   onClearSelection: () => void;
@@ -26,10 +27,24 @@ interface InfoPanelProps {
   onPickMonth?: (month: string) => void;
 }
 
+/** Current wall-clock time at the destination, for the "is it open now" question. */
+function localTimeIn(timezone: string): string {
+  try {
+    return new Intl.DateTimeFormat("en-GB", {
+      timeZone: timezone,
+      hour: "2-digit",
+      minute: "2-digit",
+    }).format(new Date());
+  } catch {
+    return "—";
+  }
+}
+
 export default function InfoPanel({
   result,
   itinerary,
   selectedPlace,
+  place,
   collapsed,
   onToggle,
   onClearSelection,
@@ -85,19 +100,35 @@ export default function InfoPanel({
       {selectedPlace ? (
         <PlaceDetail place={selectedPlace} itinerary={itinerary} onBack={onClearSelection} />
       ) : (
-        <div className="min-h-0 overflow-y-auto px-3.5 py-3 divide-y divide-rule">
+        <div className="min-h-0 overflow-y-auto pb-2">
           {result?.destination && (
-            <div className="pb-4">
-              <DestinationPanel brief={result.destination} flat />
-            </div>
+            <section>
+              <div className="px-3.5 pb-4">
+                <DestinationPanel brief={result.destination} flat />
+              </div>
+            </section>
           )}
+
           {result?.climate && (
-            <div className="pt-4">
-              <ClimatePanel climate={result.climate} onPickMonth={onPickMonth} flat />
+            <section>
+              <div className="px-3.5 pb-4">
+                <ClimatePanel climate={result.climate} onPickMonth={onPickMonth} flat />
+              </div>
+            </section>
+          )}
+
+          {/* Small but genuinely useful, and we already know it. */}
+          {place && (
+            <div className="px-3.5 py-2.5 flex items-center gap-2 border-t border-rule">
+              <Clock className="w-3 h-3 text-ink-faint shrink-0" strokeWidth={1.75} aria-hidden />
+              <span className="figure text-ink-faint">
+                {place.timezone.replace(/_/g, " ")} · {localTimeIn(place.timezone)} local
+              </span>
             </div>
           )}
+
           {!result?.destination && !result?.climate && (
-            <p className="figure text-ink-faint">
+            <p className="figure text-ink-faint px-3.5 py-3">
               Context appears here once the plan is built. Click any place in the itinerary to see
               its detail.
             </p>

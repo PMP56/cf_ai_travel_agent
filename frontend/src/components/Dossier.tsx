@@ -5,12 +5,10 @@ import {
   HandHeart,
   UtensilsCrossed,
   ShieldCheck,
-  Umbrella,
-  Wind,
   Thermometer,
-  Backpack,
   ExternalLink,
 } from "lucide-react";
+import { monthComfort, bestMonths, COMFORT_COLOUR, COMFORT_LABEL } from "../monthComfort";
 import type {
   ClimateGuidance,
   ClimateNormals,
@@ -68,9 +66,14 @@ function Panel({
       } ${className}`}
     >
       <header
-        className={`flex items-center gap-2 ${
-          flat ? "px-0 pb-2" : "px-3.5 py-2 border-b border-rule"
-        }`}
+        className={
+          flat
+            ? // Full-bleed tinted band: in the details column several sections
+              // stack in one scroll area, and a hairline between them was not
+              // enough to read as a boundary.
+              "flex items-center gap-2 -mx-3.5 px-3.5 py-2 mb-3 bg-paper-sunken border-y border-rule"
+            : "flex items-center gap-2 px-3.5 py-2 border-b border-rule"
+        }
       >
         <Icon className="w-3.5 h-3.5 text-ink-faint shrink-0" strokeWidth={1.75} aria-hidden />
         <h3 className="eyebrow flex-1">{label}</h3>
@@ -137,15 +140,15 @@ export function DestinationPanel({ brief , flat }: { flat?: boolean; brief: Dest
 }
 
 /**
- * Twelve months of temperature as a band chart, with the travel month picked
- * out and every other month clickable.
+ * Twelve months, scored and coloured.
  *
- * This is the question a traveller actually has — "is this the right month?" —
- * and the archive request already returns the whole year, so answering it costs
- * nothing extra. Clicking a month re-plans against it, which reuses the
- * brief-editing path rather than inventing a second way to change the trip.
+ * Was a floating high/low range bar with a 33°/1° axis and a "warm ▲ · rain ▬"
+ * legend — a chart you had to decode, answering a question nobody asked. The
+ * question is "is this a good month, and if not, when?", so each month now
+ * shows its average high as a plain number on a bar whose colour says how
+ * pleasant it is. Hovering gives the reason.
  */
-function ClimateChart({
+function YearStrip({
   year,
   selected,
   onPick,
@@ -157,101 +160,70 @@ function ClimateChart({
   const months = MONTHS_FULL.map((m) => year[m]).filter(Boolean);
   if (months.length < 6) return null;
 
-  const highs = months.map((m) => m.avgHighC);
-  const lows = months.map((m) => m.avgLowC);
-  const max = Math.max(...highs);
-  const min = Math.min(...lows);
+  const max = Math.max(...months.map((m) => m.avgHighC));
+  const min = Math.min(...months.map((m) => m.avgLowC));
   const span = Math.max(max - min, 1);
-  const H = 54;
 
   return (
-    <div>
-      <div className="flex items-baseline justify-between mb-1">
-        <span className="figure text-ink-faint" style={{ fontSize: 9 }}>
-          {Math.round(max)}°
-        </span>
-        <span className="figure text-ink-faint" style={{ fontSize: 9 }}>
-          warm ▲ · rain ▬
-        </span>
-      </div>
-      <div className="flex items-end gap-[3px]" role="group" aria-label="Average temperature by month">
-        {MONTHS_FULL.map((full, i) => {
-          const n = year[full];
-          if (!n) return <div key={full} className="flex-1" />;
+    <div className="flex items-end gap-[3px]" role="group" aria-label="Comfort by month">
+      {MONTHS_FULL.map((full, i) => {
+        const n = year[full];
+        if (!n) return <div key={full} className="flex-1" />;
 
-          const isSelected = full === selected;
-          const top = ((max - n.avgHighC) / span) * H;
-          const height = Math.max(((n.avgHighC - n.avgLowC) / span) * H, 3);
+        const { comfort, reason } = monthComfort(n);
+        const isSelected = full === selected;
+        // Height tracks warmth so the seasonal shape is still legible at a
+        // glance; colour carries the actual judgement.
+        const height = 14 + ((n.avgHighC - min) / span) * 30;
 
-          const bar = (
-            <>
-              <div className="relative w-full" style={{ height: H }}>
-                <div
-                  className="absolute inset-x-0 rounded-[2px] transition-colors"
-                  style={{
-                    top,
-                    height,
-                    background: isSelected ? "hsl(var(--accent))" : "hsl(var(--ink-faint))",
-                    opacity: isSelected ? 1 : 0.45,
-                  }}
-                />
-              </div>
-              {/* Rain as a second channel, so wet months read at a glance. Scaled
-                  from a visible floor — at raw opacity the difference between a
-                  20% and a 45% month was invisible. */}
-              <div className="w-full h-[5px] mt-[4px] rounded-full bg-rule overflow-hidden">
-                <div
-                  className="h-full rounded-full"
-                  style={{
-                    width: `${Math.round(Math.min(n.rainyDayFraction / 0.5, 1) * 100)}%`,
-                    background: isSelected ? "hsl(var(--accent))" : "hsl(var(--ink-faint))",
-                    opacity: isSelected ? 1 : 0.55,
-                  }}
-                />
-              </div>
-              <span
-                className={`figure block text-center mt-1 ${
-                  isSelected ? "text-accent font-medium" : "text-ink-faint"
-                }`}
-                style={{ fontSize: 9 }}
-              >
-                {MONTHS_SHORT[i]}
-              </span>
-            </>
-          );
+        const title = `${full}: ${Math.round(n.avgHighC)}° / ${Math.round(n.avgLowC)}°, ${COMFORT_LABEL[comfort]}${
+          reason ? ` — ${reason}` : ""
+        }`;
 
-          const title = `${full}: ${n.avgHighC}° / ${n.avgLowC}°C, rain on ${Math.round(
-            n.rainyDayFraction * 100
-          )}% of days`;
-
-          return onPick && !isSelected ? (
-            <button
-              key={full}
-              type="button"
-              onClick={() => onPick(full)}
-              title={`${title} — click to re-plan for ${full}`}
-              aria-label={`Re-plan for ${full}. ${title}`}
-              className="flex-1 min-w-0 group/m rounded-xs hover:bg-paper-sunken transition-colors"
+        const body = (
+          <>
+            <div
+              className="w-full rounded-[2px] flex items-start justify-center pt-0.5"
+              style={{
+                height,
+                background: COMFORT_COLOUR[comfort],
+                opacity: isSelected ? 1 : 0.75,
+                outline: isSelected ? "2px solid hsl(var(--ink))" : "none",
+                outlineOffset: 1,
+              }}
             >
-              {bar}
-            </button>
-          ) : (
-            <div key={full} className="flex-1 min-w-0" title={title} aria-current={isSelected}>
-              {bar}
+              <span className="figure text-paper" style={{ fontSize: 9, fontWeight: 500 }}>
+                {Math.round(n.avgHighC)}
+              </span>
             </div>
-          );
-        })}
-      </div>
-      <div className="flex items-baseline justify-between mt-1">
-        <span className="figure text-ink-faint" style={{ fontSize: 9 }}>
-          {Math.round(min)}°
-        </span>
-        {onPick && (
-          <span className="figure text-ink-faint" style={{ fontSize: 9 }}>
-            click a month to re-plan
-          </span>
-        )}
-      </div>
+            <span
+              className={`figure block text-center mt-1 ${
+                isSelected ? "text-ink font-medium" : "text-ink-faint"
+              }`}
+              style={{ fontSize: 9 }}
+            >
+              {MONTHS_SHORT[i]}
+            </span>
+          </>
+        );
+
+        return onPick && !isSelected ? (
+          <button
+            key={full}
+            type="button"
+            onClick={() => onPick(full)}
+            title={`${title} — click to re-plan`}
+            aria-label={`Re-plan for ${full}. ${title}`}
+            className="flex-1 min-w-0 rounded-xs hover:opacity-100 transition-opacity"
+          >
+            {body}
+          </button>
+        ) : (
+          <div key={full} className="flex-1 min-w-0" title={title} aria-current={isSelected}>
+            {body}
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -267,6 +239,8 @@ export function ClimatePanel({
 }) {
   const n = climate.normals;
   const rainPct = Math.round(n.rainyDayFraction * 100);
+  const { comfort, reason } = monthComfort(n);
+  const best = bestMonths(climate.year).filter((m) => m !== n.month);
 
   return (
     <Panel
@@ -275,50 +249,53 @@ export function ClimatePanel({
       source={`ERA5 · ${n.yearsSampled}yr mean`}
       flat={flat}
     >
-      {/* The three figures that change what you pack and when you go. */}
-      <div className="grid grid-cols-3 gap-px bg-rule border border-rule rounded-sm overflow-hidden mb-3">
-        {[
-          [Thermometer, `${n.avgHighC}° / ${n.avgLowC}°`, "high / low"],
-          [Umbrella, `${rainPct}%`, "of days wet"],
-          [Wind, `${Math.round(n.avgWindKph)}`, "km/h wind"],
-        ].map(([Icon, value, caption]) => {
-          const I = Icon as typeof Thermometer;
-          return (
-            <div key={caption as string} className="bg-paper-raised px-2 py-2 text-center">
-              <I className="w-3 h-3 text-ink-faint mx-auto" strokeWidth={1.75} aria-hidden />
-              <div className="text-[14px] font-semibold tracking-tight mt-1">{value as string}</div>
-              <div className="figure text-ink-faint" style={{ fontSize: 9 }}>
-                {caption as string}
-              </div>
-            </div>
-          );
-        })}
+      {/* The verdict first, in words, then the numbers behind it. */}
+      <div className="flex items-baseline gap-2 flex-wrap">
+        <span
+          className="text-[13px] font-semibold px-1.5 py-0.5 rounded-xs"
+          style={{ background: COMFORT_COLOUR[comfort], color: "hsl(var(--paper))" }}
+        >
+          {COMFORT_LABEL[comfort]}
+        </span>
+        <span className="figure text-ink-soft">
+          {Math.round(n.avgHighC)}° / {Math.round(n.avgLowC)}° · rain {rainPct}% of days
+          {n.avgWindKph >= 25 && ` · wind ${Math.round(n.avgWindKph)}km/h`}
+        </span>
+      </div>
+      {reason && <p className="figure text-ink-faint mt-1">{reason}</p>}
+
+      <div className="mt-3">
+        <YearStrip year={climate.year} selected={n.month} onPick={onPickMonth} />
+        {onPickMonth && (
+          <p className="figure text-ink-faint mt-1.5">click a month to re-plan for it</p>
+        )}
       </div>
 
-      <ClimateChart year={climate.year} selected={n.month} onPick={onPickMonth} />
-
-      {climate.summary && (
-        <p className="text-[13px] text-ink-soft mt-3 pt-3 border-t border-rule leading-relaxed">
-          {climate.summary}
+      {best.length > 0 && (
+        <p className="text-[12.5px] text-ink-soft mt-3 pt-3 border-t border-rule">
+          <span className="eyebrow">Also good</span>{" "}
+          <span className="ml-1">{best.join(" · ")}</span>
         </p>
       )}
+
       {climate.caution && (
-        <p className="text-[13px] text-warn mt-2 leading-relaxed">{climate.caution}</p>
+        <p className="text-[12.5px] text-warn mt-2.5 leading-relaxed">{climate.caution}</p>
       )}
 
       {climate.packing.length > 0 && (
-        <Callout icon={Backpack} label="Pack">
-          <span className="block space-y-1 mt-0.5">
+        <div className="mt-3 pt-3 border-t border-rule">
+          <span className="eyebrow">Pack</span>
+          <ul className="flex flex-wrap gap-1.5 mt-1.5">
             {climate.packing.map((item) => (
-              <span key={item} className="flex gap-2">
-                <span aria-hidden className="text-ink-faint shrink-0">
-                  —
-                </span>
-                <span>{item}</span>
-              </span>
+              <li
+                key={item}
+                className="text-[12px] px-1.5 py-0.5 rounded-xs bg-paper-sunken border border-rule text-ink-soft"
+              >
+                {item}
+              </li>
             ))}
-          </span>
-        </Callout>
+          </ul>
+        </div>
       )}
     </Panel>
   );

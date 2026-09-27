@@ -138,6 +138,31 @@ Assumptions made while writing these docs — correct any that are wrong.
 
 ## Session log
 
+### 2026-09-27 — Weather chart made legible; context sections separated
+The chart was a floating high/low range bar with a 33°/1° axis and a "warm ▲ · rain ▬" legend —
+a convention that has to be decoded (people read bar *height* as magnitude, not bar *position* as a
+band), and it answered the wrong question anyway. What a traveller wants is "is this a good month,
+and if not, when?"
+
+`monthComfort()` now scores each month for walking around — heat, cold, rain, and wind only once it
+passes 30km/h — and the strip colours each month by that verdict with its average high printed on
+it. The selected month is outlined and labelled in words ("ideal"), and an **Also good** line names
+the alternatives. Pure and unit-tested, 12 cases.
+
+Worth recording as validation: run against real Kyoto normals the function independently reproduces
+the conventional advice — April, May, October and November ideal, August harsh. Nobody encoded that;
+it falls out of the thresholds.
+
+Text cut hard: the three stat tiles duplicated what the strip now shows, and the model's summary
+paragraph restated the same figures in prose. Both gone. What remains is a verdict badge, one line
+of numbers, the strip, the alternatives, any caution, and packing as chips.
+
+Section separation: a hairline between "the place" and the weather was not enough in a single
+scroll area, so flat panel headers became full-bleed tinted bands.
+
+Added the destination's timezone and current local time, which we already knew from geocoding and
+which answers "is anything open right now".
+
 ### 2026-09-27 — Details panel polish
 Three fixes from review of the new column.
 

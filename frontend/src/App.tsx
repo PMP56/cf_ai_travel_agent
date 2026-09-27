@@ -277,6 +277,7 @@ export default function App() {
             result={result}
             itinerary={itinerary}
             selectedPlace={selectedPlace}
+            place={place}
             collapsed={infoCollapsed}
             onToggle={() => setCollapsed(!infoCollapsed)}
             onClearSelection={() => setSelectedPlace(null)}
