@@ -138,6 +138,36 @@ Assumptions made while writing these docs — correct any that are wrong.
 
 ## Session log
 
+### 2026-09-27 — Road band: full-bleed, fixed, decluttered
+Prashanna approved the road scene and asked for four changes: full width, fixed to the foot of the
+window with no page scroll, no roadside furniture, and less traffic.
+
+The width change forced a rethink of how the SVG is sized. It is now sliced rather than fitted
+(`preserveAspectRatio="xMidYMax slice"`) against a viewBox widened to 2400×320, so the **container
+height sets the scale and a wider window simply reveals more road**. That keeps every object the
+same size on a phone and on a 2560px monitor, instead of a full-width `height: auto` SVG growing to
+469px tall on desktop and collapsing to 60px on mobile. Vehicle travel and the dash run were
+widened to match the larger viewBox; layer speeds in units per second are unchanged.
+
+`--band-h: clamp(148px, 21vh, 232px)` is defined once and used twice — by the fixed band for its
+height, and by the page for its bottom padding, so the two cannot drift apart. The band is
+`pointer-events: none`, since a decorative strip must never swallow a click, and carries a
+gradient to opaque paper so anything scrolling behind it is occluded without a ruled top edge.
+
+The document itself never scrolls at any size tested (1512×1000, 1440×720, 390×844, 2560×1300).
+Below about 800px of height the *content area* scrolls internally rather than clipping, which is
+the safe failure: the ask was that the page not scroll, not that content be cut off.
+
+Removed all midground furniture (trees, conifers, lamps, fingerposts, milestones) and the scooter,
+leaving the skyline alone behind the road. Traffic is down from seven vehicles to five — bus,
+camper and cyclist our way, truck and car oncoming — giving about 4.1 on screen at once against
+7 before. Re-audited: **zero same-lane overlaps across the full 102s loop**, tightest gap 571px.
+
+Also dropped the near kerb so the road runs off the bottom of the window rather than stopping 7px
+short of it, and lifted the clouds and aircraft clear of the band's top edge.
+
+Lint, 25 tests and build clean. Deployed.
+
 ### 2026-09-27 — Homepage animation: road band (replaces the orbit globe)
 The globe was accepted as a prototype but rejected on substance: the plane's heading was wrong and
 the windmill's sails, at 3.4s, read as a flickering star. Both were orientation/rate faults that a

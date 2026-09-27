@@ -24,18 +24,21 @@ import { memo } from "react";
  * left, so a vehicle can never face away from where it is going.
  */
 
-/* ---- Scene geometry. One tile width per layer; see the CSS. ---- */
-const W = 1200;
-const H = 372;
-const LAND_Y = 252;   // horizon: landmarks stand here
-const MID_Y = 286;    // trees, lamps and signs
-const ROAD_TOP = 288;
-const FAR_Y = 312;    // far lane, oncoming
-const CENTRE_Y = 324;
-const NEAR_Y = 356;   // near lane, our direction
-const ROAD_BOT = 366;
+/* ---- Scene geometry. One tile width per layer; see the CSS. ----
+   The band is full-bleed and fixed to the foot of the window, so the viewBox
+   is wide and shallow and the SVG is sliced rather than fitted: the container
+   height sets the scale, and a wider window simply reveals more road. That
+   keeps every object the same size on a phone and on a desktop. */
+const W = 2400;
+const H = 320;
+const LAND_Y = 214;   // horizon: landmarks stand here
+const ROAD_TOP = 222;
+const FAR_Y = 248;    // far lane, oncoming
+const CENTRE_Y = 262;
+const NEAR_Y = 296;   // near lane, our direction
+// No near kerb: the road runs off the bottom of the window.
 
-const LANDMARK_SCALE = 1.16;
+const LANDMARK_SCALE = 1.05;
 
 const ink = {
   fill: "none",
@@ -352,18 +355,6 @@ const Truck = () => (
   </g>
 );
 
-const Scooter = () => (
-  <g {...ink}>
-    <circle cx="-16" cy="-7" r="7" fill={PAPER} />
-    <circle cx="16" cy="-7" r="7" fill={PAPER} />
-    <path d="M-16 -7 L-8 -18 H4 L10 -26 M4 -18 L16 -7" strokeWidth={1.5} />
-    <path d="M10 -26 H18" strokeWidth={1.5} />
-    <path d="M-10 -14 H2 L4 -18 H-8 Z" fill={PAPER} strokeWidth={1.3} />
-    <path d="M-4 -16 L-6 -28 L6 -34" strokeWidth={1.5} />
-    <path d="M6 -34 L14 -29" strokeWidth={1.5} />
-    <circle cx="9" cy="-40" r="4.6" fill={PAPER} />
-  </g>
-);
 
 const Cyclist = () => (
   <g {...ink}>
@@ -411,52 +402,6 @@ const Birds = ({ s = 1 }: { s?: number }) => (
   </g>
 );
 
-/* ---- Roadside furniture ---- */
-
-const Tree = () => (
-  <g {...ink}>
-    <path d="M0 0 V-16" />
-    <path d="M-13 -16 Q-15 -34 0 -36 Q15 -34 13 -16 Z" fill={PAPER} />
-    <path d="M-6 -12 L0 -18 M6 -12 L0 -18" strokeWidth={1.1} />
-  </g>
-);
-
-const Conifer = () => (
-  <g {...ink}>
-    <path d="M0 0 V-12" />
-    <path d="M-11 -12 L0 -26 L11 -12 Z" fill={PAPER} />
-    <path d="M-9 -21 L0 -34 L9 -21 Z" fill={PAPER} />
-    <path d="M-6 -29 L0 -40 L6 -29 Z" fill={PAPER} />
-  </g>
-);
-
-/** Reworked: the first attempt had a long swan-neck arm and read as a crane. */
-const Lamp = () => (
-  <g {...ink}>
-    <path d="M0 0 V-40" />
-    <path d="M0 -40 Q0 -47 7 -47" />
-    <path d="M2 -47 H13 L10 -41 H5 Z" fill={PAPER} strokeWidth={1.4} />
-    <path d="M-4 0 H4" />
-  </g>
-);
-
-/** A fingerpost is the most travel-shaped object there is. */
-const Signpost = () => (
-  <g {...ink}>
-    <path d="M0 0 V-42" />
-    <path d="M-2 -40 H-20 L-25 -35 L-20 -30 H-2 Z" fill={PAPER} strokeWidth={1.5} />
-    <path d="M2 -28 H18 L23 -23 L18 -18 H2 Z" fill={PAPER} strokeWidth={1.5} />
-    <path d="M-4 0 H4" />
-  </g>
-);
-
-const Milestone = () => (
-  <g {...ink}>
-    <path d="M-6 0 V-9 Q-6 -14 0 -14 Q6 -14 6 -9 V0 Z" fill={PAPER} />
-    <path d="M-6 -8 H6" strokeWidth={1.1} />
-  </g>
-);
-
 /* ------------------------------------------------------------------ *
  * Layout. Positions are fixed rather than random so the composition is
  * the same every render and a screenshot means something.
@@ -480,17 +425,10 @@ const LAND_PLACEMENT = [
   [1710, 1.0], [1850, 0.88], [1990, 1.05], [2120, 0.92], [2255, 1.0], [2395, 0.9],
 ] as const;
 
-const MID_TILE = 1200;
-const MID_PLACEMENT: [number, () => React.ReactElement, number][] = [
-  [70, Tree, 0.82], [190, Milestone, 0.9], [300, Lamp, 0.8], [425, Conifer, 0.78],
-  [560, Signpost, 0.82], [690, Tree, 0.86], [820, Milestone, 0.9],
-  [935, Conifer, 0.8], [1070, Tree, 0.78],
-];
-
 const CLOUD_TILE = 1800;
 const CLOUD_PLACEMENT: [number, number, number][] = [
-  [90, 52, 1.1], [360, 30, 0.8], [620, 66, 0.95], [880, 38, 1.15],
-  [1130, 58, 0.85], [1400, 28, 1.0], [1650, 70, 0.75],
+  [90, 52, 1.1], [360, 32, 0.8], [620, 66, 0.95], [880, 40, 1.15],
+  [1130, 58, 0.85], [1400, 30, 1.0], [1650, 70, 0.75],
 ];
 
 /** Dash period. Long enough that the markings do not strobe once moving. */
@@ -498,11 +436,16 @@ const DASH_TILE = 120;
 
 function RoadBand({ reduced = false }: { reduced?: boolean }) {
   return (
-    <div
-      className={`road-band mx-auto w-full max-w-[880px] px-4${reduced ? " road-still" : ""}`}
-      aria-hidden
-    >
-      <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto" role="presentation">
+    <div className={`road-band${reduced ? " road-still" : ""}`} aria-hidden>
+      <svg
+        viewBox={`0 0 ${W} ${H}`}
+        className="w-full h-full"
+        /* Slice, not fit: the height sets the scale and the width just reveals
+           more of the road, so objects stay the same size at any window width.
+           yMax keeps the road pinned to the bottom edge. */
+        preserveAspectRatio="xMidYMax slice"
+        role="presentation"
+      >
         {/* ---- Sky: the slowest layer, so it reads as farthest ---- */}
         <g className="road-clouds" style={{ opacity: 0.3 }}>
           {[0, CLOUD_TILE].map((off) =>
@@ -516,7 +459,7 @@ function RoadBand({ reduced = false }: { reduced?: boolean }) {
 
         <g style={{ opacity: 0.4 }}>
           <g className="road-bob-slow">
-            <g transform="translate(250 34)">
+            <g transform="translate(420 40)">
               <Birds s={0.85} />
             </g>
           </g>
@@ -526,26 +469,26 @@ function RoadBand({ reduced = false }: { reduced?: boolean }) {
             flies left is the same drawing mirrored, never the same drawing
             pointed the wrong way. */}
         <g className="road-fly-right" style={{ opacity: 0.75 }}>
-          <g transform="translate(0 74)">
+          <g transform="translate(0 62)">
             <Plane />
           </g>
         </g>
         <g className="road-fly-left" style={{ opacity: 0.5 }}>
-          <g transform="translate(0 32) scale(-0.88 0.88)">
+          <g transform="translate(0 30) scale(-0.88 0.88)">
             <Plane />
           </g>
         </g>
 
         <g className="road-drift-balloon-a" style={{ opacity: 0.68 }}>
           <g className="road-bob-a">
-            <g transform="translate(0 128)">
+            <g transform="translate(0 116)">
               <Balloon />
             </g>
           </g>
         </g>
         <g className="road-drift-balloon-b" style={{ opacity: 0.5 }}>
           <g className="road-bob-b">
-            <g transform="translate(0 104) scale(0.72)">
+            <g transform="translate(0 84) scale(0.72)">
               <Balloon />
             </g>
           </g>
@@ -571,20 +514,8 @@ function RoadBand({ reduced = false }: { reduced?: boolean }) {
         {/* The ground the landmarks stand on. */}
         <path d={`M0 ${LAND_Y} H${W}`} {...hairline} style={{ opacity: 0.35 }} />
 
-        {/* ---- Midground: faster, so it separates from the skyline ---- */}
-        <g className="road-mid" style={{ opacity: 0.72 }}>
-          {[0, MID_TILE].map((off) =>
-            MID_PLACEMENT.map(([x, Item, s], i) => (
-              <g key={`${off}-${i}`} transform={`translate(${x + off} ${MID_Y}) scale(${s})`}>
-                <Item />
-              </g>
-            ))
-          )}
-        </g>
-
         {/* ---- The road ---- */}
         <path d={`M0 ${ROAD_TOP} H${W}`} {...ink} style={{ opacity: 0.5 }} />
-        <path d={`M0 ${ROAD_BOT} H${W}`} {...ink} style={{ opacity: 0.5 }} />
         <g className="road-dashes" style={{ opacity: 0.45 }}>
           <path
             d={`M0 ${CENTRE_Y} H${W + DASH_TILE}`}
@@ -608,11 +539,6 @@ function RoadBand({ reduced = false }: { reduced?: boolean }) {
             <Car />
           </g>
         </g>
-        <g className="road-far-c" style={{ opacity: 0.78 }}>
-          <g transform={`translate(0 ${FAR_Y}) scale(-0.84 0.84)`}>
-            <Scooter />
-          </g>
-        </g>
 
         <g className="road-near-a" style={{ opacity: 0.95 }}>
           <g className="road-jolt">
@@ -624,19 +550,12 @@ function RoadBand({ reduced = false }: { reduced?: boolean }) {
         <g className="road-near-b" style={{ opacity: 0.95 }}>
           <g className="road-jolt-b">
             <g transform={`translate(0 ${NEAR_Y})`}>
-              <Car />
+              <Camper />
             </g>
           </g>
         </g>
         <g className="road-near-c" style={{ opacity: 0.95 }}>
           <g className="road-jolt">
-            <g transform={`translate(0 ${NEAR_Y})`}>
-              <Camper />
-            </g>
-          </g>
-        </g>
-        <g className="road-near-d" style={{ opacity: 0.95 }}>
-          <g className="road-jolt-b">
             <g transform={`translate(0 ${NEAR_Y})`}>
               <Cyclist />
             </g>

@@ -140,7 +140,8 @@ export default function App() {
 
       {!started ? (
         /* ---- Cold start: one question, centred ---- */
-        <main className="flex-1 overflow-y-auto flex flex-col">
+        <>
+        <main className="flex-1 min-h-0 overflow-y-auto flex flex-col pb-[var(--band-h)]">
           <div className="w-full max-w-[860px] mx-auto px-6 pt-[clamp(28px,6vh,64px)] pb-4">
             <p className="eyebrow">Plan a trip</p>
             <h1 className="display text-[clamp(40px,6.5vw,76px)] mt-2 mb-4">
@@ -181,11 +182,11 @@ export default function App() {
             </dl>
           </div>
 
-          {/* Anchors the foot of the page, which was a large empty area. */}
-          <div className="mt-auto pb-10 pt-8">
-            <RoadBand reduced={reducedMotion} />
-          </div>
         </main>
+        {/* Fixed to the window rather than the document, so it stays put and
+            the page behind it never needs to scroll to reach it. */}
+        <RoadBand reduced={reducedMotion} />
+        </>
       ) : (
         /* ---- Working view ---- */
         <main className="flex-1 min-h-0 flex">
