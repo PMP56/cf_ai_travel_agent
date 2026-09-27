@@ -138,6 +138,58 @@ Assumptions made while writing these docs — correct any that are wrong.
 
 ## Session log
 
+### 2026-09-27 — Homepage animation: road band (replaces the orbit globe)
+The globe was accepted as a prototype but rejected on substance: the plane's heading was wrong and
+the windmill's sails, at 3.4s, read as a flickering star. Both were orientation/rate faults that a
+single still could never show. Prashanna supplied a second reference —
+[Takane Ichinose's "Car in a city animation parallax"](https://codepen.io/takaneichinose/pen/OONGbv)
+— and asked for a flat road with landmarks behind, traffic on it and aircraft above, keeping the
+line-drawn landmarks from the globe.
+
+That pen's lesson is the same shape as the last one's: depth needs no 3D and no scroll listener.
+Every layer runs the *same* translation and differs only in duration (road 4s, trees 12s, near
+buildings 25s, far buildings 50s, clouds 75s). `RoadBand.tsx` uses a roughly halving ladder —
+dashes 70, midground 35, landmarks 17, clouds 6 units per second — with each strip duplicated at
+its tile width and translated by exactly that width, so the loop is seamless without per-element
+wrap keyframes.
+
+Six defects, all found by looking at frames rather than one still:
+
+- **A CSS `transform` animation overrides an SVG `transform` attribute on the same element.** Any
+  group carrying both its position and its bob snaps to the origin. Position now always lives on an
+  inner group.
+- **Everything was transparent outline**, so a truck passing a tree rendered as both at once. Every
+  solid object now carries a paper-coloured fill on its outer silhouette — the background colour,
+  not white, so occlusion survives dark mode.
+- **Near-lane vehicles drove straight through each other.** Per-vehicle speeds look livelier in a
+  still and are wrong in motion: they close and intersect, and no z-order fixes it. Traffic in a
+  lane now shares one duration and is separated purely by negative delay, so the spacing is fixed
+  for ever. Verified: **zero same-lane overlaps across the full 58s loop**, tightest gap 230px.
+- **Depth was inverted** — distant landmarks were drawn at full weight and read as nearer than the
+  trees in front of them. Atmospheric perspective added: distance now thins the line as well as
+  slowing it.
+- **The Eiffel read as a plain cone** at background weight; redrawn with a cubic concave profile.
+  The scooter and cyclist were redrawn too, the cyclist having read as a person under an umbrella.
+- **Renaming `.orbit-sails` to `.road-sails` created a specificity collision**: the generic
+  `g[class^="road-"]` rule (0,2,1) outranked it (0,1,0) and imposed `view-box`, which would have
+  swung the sails about the scene origin. Qualified to `.road-band g.road-sails`.
+
+**A methodology note worth keeping.** The first overlap audit reported 118 collisions that did not
+exist. `Animation.currentTime` already accounts for `animation-delay`, and the scrubbing helper
+subtracted it a second time, rendering every vehicle at the next one's slot. Live playback had been
+correct throughout; the review tool was the thing that was broken. When an automated check reports a
+fault, confirm it against the unpaused page before changing anything.
+
+Orientation is now asserted programmatically rather than eyeballed: everything travelling left is
+the same drawing mirrored, so nothing can face away from where it is going. Near-lane vehicles face
+right even while drifting left, which is correct — they travel our way, slower than the camera.
+Checked in light, dark, mobile (390px) and `prefers-reduced-motion`; the 150s landmark seam was
+inspected either side of the wrap and is invisible. Lint, 25 tests and build clean.
+`OrbitBand.tsx` is deleted.
+
+**Still undeployed.** Nine-plus frontend changes now, including the `.env.production` fix — until a
+deploy runs, the live site still calls each visitor's own machine.
+
 ### 2026-09-27 — Homepage animation: orbit band (replaces the departure board)
 The split-flap board worked but was judged not to fit. Prashanna supplied a reference —
 [Jose Aguinaga's "Travel Animation"](https://codepen.io/loic_album/pen/aZEWNg) — and chose its

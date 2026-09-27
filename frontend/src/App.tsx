@@ -25,7 +25,7 @@ import {
   ClimatePanelInline,
 } from "./components/Dossier";
 import InfoPanel from "./components/InfoPanel";
-import OrbitBand from "./components/OrbitBand";
+import RoadBand from "./components/RoadBand";
 
 /**
  * Workspace shell.
@@ -183,7 +183,7 @@ export default function App() {
 
           {/* Anchors the foot of the page, which was a large empty area. */}
           <div className="mt-auto pb-10 pt-8">
-            <OrbitBand reduced={reducedMotion} />
+            <RoadBand reduced={reducedMotion} />
           </div>
         </main>
       ) : (

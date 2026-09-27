@@ -378,81 +378,117 @@ select optgroup {
   color: hsl(var(--ink-faint));
 }
 
-/* ---- Homepage orbit band -------------------------------------------------
-   The mechanism comes from Jose Aguinaga's "Travel Animation" pen: concentric
-   layers sharing one transform-origin, each turning at its own rate. There are
-   only two keyframes because that is genuinely all it needs — every layer is
-   the same rotation at a different duration and sign, and the richness comes
-   from the differential between them.
+/* ---- Homepage road band -------------------------------------------------
+   Parallax with no 3D and no scroll listener, after Takane Ichinose's "Car in
+   a city animation parallax": every layer runs the same translation and
+   differs only in duration, so distance is expressed purely as speed. Each
+   strip is duplicated at its tile width and translated by exactly that width,
+   which makes the loop seamless without any per-element wrap keyframes.
 
-   Ink only, no accent or day colours. The reference is flat multicoloured
-   illustration; a rainbow carousel under an engraving would read as a
-   different product.
+   The speed ladder is roughly halving, nearest first — 70, 35, 17, 6 units per
+   second. Keeping the ratios wide is what separates the layers; when they are
+   close the scene reads as one flat sheet sliding along.
 
-   transform-box: view-box is the part that is easy to get wrong. Without it an
-   SVG group resolves transform-origin against its own bounding box, so every
-   ring spins about its own centre instead of the globe's and the illusion
-   collapses into unrelated wobbling parts.
+   transform-box: view-box so that px in these keyframes means user units.
    ----------------------------------------------------------------------- */
 
-.orbit-band {
+.road-band {
   color: hsl(var(--ink));
-  /* Landmarks rotate in and out past the frame edge. Without this they are
-     sliced off by a hard vertical cut, which reads as a clipping bug rather
-     than as something going over the horizon. */
-  -webkit-mask-image: linear-gradient(to right, transparent, #000 8%, #000 92%, transparent);
-  mask-image: linear-gradient(to right, transparent, #000 8%, #000 92%, transparent);
+  /* Traffic and buildings cross the frame edge. Without this they are cut off
+     by a hard vertical line, which reads as a clipping bug. */
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 7%, #000 93%, transparent);
+  mask-image: linear-gradient(to right, transparent, #000 7%, #000 93%, transparent);
 }
 
-.orbit-band g[class^="orbit-"] {
+.road-band g[class^="road-"] {
   transform-box: view-box;
-  transform-origin: 440px 560px;
 }
 
-@keyframes orbit-cw {
-  to { transform: rotate(360deg); }
+/* Atmospheric perspective. Speed alone was not enough: the landmarks were
+   drawn at full weight and read as nearer than the trees in front of them.
+   Distance thins the line as well as slowing it. */
+.road-landmarks :is(path, circle) {
+  stroke-width: 1.5;
 }
 
-@keyframes orbit-ccw {
-  to { transform: rotate(-360deg); }
+.road-mid :is(path, circle) {
+  stroke-width: 1.7;
 }
 
-@keyframes orbit-bob {
-  50% { transform: translateY(5px); }
-}
+@keyframes road-land   { to { transform: translateX(-2520px); } }
+@keyframes road-mid    { to { transform: translateX(-1200px); } }
+@keyframes road-cloud  { to { transform: translateX(-1800px); } }
+@keyframes road-dash   { to { transform: translateX(-120px); } }
 
-/* The landmark ring is deliberately the slowest thing on the page: fast enough
-   that the skyline has visibly moved on if you glance back, slow enough that it
-   never competes with the prompt above it. */
-.orbit-ring       { animation: orbit-cw  210s linear infinite; }
-.orbit-track      { animation: orbit-cw   34s linear infinite; }
-.orbit-track-rev  { animation: orbit-ccw  52s linear infinite; }
-.orbit-route      { animation: orbit-cw   96s linear infinite; }
-.orbit-plane      { animation: orbit-cw   48s linear infinite; }
-.orbit-plane-far  { animation: orbit-cw   78s linear infinite; }
-.orbit-balloon    { animation: orbit-ccw 128s linear infinite; }
+/* Traffic crosses the full frame plus a margin at each end, so nothing ever
+   pops into existence inside the view. */
+@keyframes road-left   { from { transform: translateX(1400px); } to { transform: translateX(-240px); } }
+@keyframes road-right  { from { transform: translateX(-240px); } to { transform: translateX(1400px); } }
 
-/* The one place two rates meet, and the detail that makes the whole thing read
-   as machinery rather than drift. fill-box, not view-box: the sails turn about
-   their own hub, which the ring is meanwhile carrying around the globe. */
-.orbit-sails {
+@keyframes road-bob    { 50% { transform: translateY(-7px); } }
+@keyframes road-bob-sm { 50% { transform: translateY(-4px); } }
+@keyframes road-sink   { 50% { transform: translateY(4px); } }
+
+/* Suspension. Barely perceptible on its own, but a vehicle without it looks
+   like it is sliding rather than being driven. */
+@keyframes road-jolt   { 30% { transform: translateY(1px); } 70% { transform: translateY(-0.6px); } }
+
+.road-landmarks { animation: road-land  150s linear infinite; }
+.road-mid       { animation: road-mid    34s linear infinite; }
+.road-clouds    { animation: road-cloud 300s linear infinite; }
+.road-dashes    { animation: road-dash  1.7s linear infinite; }
+
+/* Traffic within a lane shares one duration, and is separated purely by
+   negative delay. Giving each vehicle its own speed looked livelier in a still
+   and was wrong in motion: they close on each other and drive straight through,
+   which no amount of z-order fixes. Equal speed means the spacing set here is
+   the spacing for ever. Delays are the duration split evenly, so the gaps are
+   identical all the way round the loop.
+
+   Oncoming is quick, because its own speed and the camera's add together;
+   our own lane only drifts, because we are overtaking it slowly. */
+.road-far-a { animation: road-left 15s linear   0s   infinite; }
+.road-far-b { animation: road-left 15s linear  -5s   infinite; }
+.road-far-c { animation: road-left 15s linear -10s   infinite; }
+
+.road-near-a { animation: road-left 58s linear   0s   infinite; }
+.road-near-b { animation: road-left 58s linear -14.5s infinite; }
+.road-near-c { animation: road-left 58s linear -29s   infinite; }
+.road-near-d { animation: road-left 58s linear -43.5s infinite; }
+
+.road-fly-right { animation: road-right 34s linear  -9s infinite; }
+.road-fly-left  { animation: road-left  46s linear -25s infinite; }
+
+.road-drift-balloon-a { animation: road-left 190s linear  -40s infinite; }
+.road-drift-balloon-b { animation: road-left 260s linear -150s infinite; }
+
+.road-bob-a    { animation: road-bob     7s ease-in-out infinite; }
+.road-bob-b    { animation: road-bob-sm  5.5s ease-in-out infinite; }
+.road-bob-slow { animation: road-sink    6s ease-in-out infinite; }
+.road-jolt     { animation: road-jolt   1.1s linear infinite; }
+.road-jolt-b   { animation: road-jolt   1.35s linear infinite; }
+
+/* The windmill's sails. At 3.4s they read as a flickering star rather than a
+   mechanism, which is exactly how they were reported. */
+/* Qualified to outrank the generic `g[class^="road-"]` rule above, which would
+   otherwise impose view-box and swing the sails about the scene's origin
+   instead of their own hub. */
+.road-band g.road-sails {
   transform-box: fill-box;
   transform-origin: 50% 50%;
-  animation: orbit-cw 3.4s linear infinite;
+  animation: road-sails 11s linear infinite;
 }
 
-.orbit-bob-1 { animation: orbit-bob 6s ease-in-out 0s   infinite; }
-.orbit-bob-2 { animation: orbit-bob 7s ease-in-out 1.2s infinite; }
-.orbit-bob-3 { animation: orbit-bob 5s ease-in-out 2.4s infinite; }
+@keyframes road-sails { to { transform: rotate(360deg); } }
 
-.orbit-still,
-.orbit-still * {
+.road-still,
+.road-still * {
   animation: none !important;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .orbit-band,
-  .orbit-band * {
+  .road-band,
+  .road-band * {
     animation: none !important;
   }
 }
